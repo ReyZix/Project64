@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project 64 — Autonomous Chessboard 3D Simulator & Path Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #111827;
+      --border-col: #1f2937;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    canvas {
+      touch-action: none;
+      user-select: none;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="antialiased p-3 md:p-4 select-none min-h-screen">
+  <div class="max-w-[1520px] mx-auto flex flex-col gap-3">
+    <!-- Top Header & Preset Demos -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="px-2 py-0.5 text-xs font-semibold rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">PROJECT 64</span>
+          <h1 class="text-base md:text-lg font-bold text-slate-100">Autonomous Chessboard — 3D Gantry &amp; Movement Simulator</h1>
+          <span id="turnBadge" class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40">
+            Turn: White
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5">
+          Click a piece of the side to move (on the 3D board or 2D mini-board), then a highlighted legal square. Only legal chess moves are accepted. Left-drag to orbit 3D view, scroll to zoom, right-drag to pan.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button onclick="runScenario('knight_nudge')" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 transition">
+          1. Knight Pass (Edge Nudge)
+        </button>
+        <button onclick="runScenario('bishop_diagonal')" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 transition">
+          2. Bishop Tight Diagonal
+        </button>
+        <button onclick="runScenario('capture_graveyard')" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition">
+          3. Capture &rarr; 16-Slot Graveyard
+        </button>
+        <button onclick="runScenario('promotion')" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 transition">
+          4. Pawn Promotion (Q Swap)
+        </button>
+        <button onclick="runScenario('castling')" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 transition">
+          5. Castling (King Nudge)
+        </button>
+        <button onclick="resetBoardStandard()" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          Reset Full Board
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+      <!-- 3D Viewport (8 cols) -->
+      <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex flex-col relative">
+        <!-- Viewport Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-slate-800 bg-slate-900/90 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="font-semibold text-slate-300 mr-1">Camera:</span>
+            <button onclick="setCameraPreset('white')" class="px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700">White POV</button>
+            <button onclick="setCameraPreset('black')" class="px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700">Black POV</button>
+            <button onclick="setCameraPreset('top')" class="px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700">Top-Down</button>
+            <button onclick="setCameraPreset('under')" class="px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700">Under-Board Gantry</button>
+            <button onclick="setCameraPreset('side')" class="px-2 py-1 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700">Side Profile</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="legalMovesToggle" checked onchange="toggleRuleMode(this.checked)" class="rounded" />
+              <span class="text-slate-300">Show Legal Move Guides</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="xrayToggle" checked onchange="toggleXray(this.checked)" class="rounded" />
+              <span class="text-slate-300">X-Ray Board</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="radiiToggle" checked onchange="toggleRadii(this.checked)" class="rounded" />
+              <span class="text-slate-300">Clearance Rings</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 3D Canvas -->
+        <div class="relative w-full h-[540px] md:h-[620px] bg-slate-950">
+          <canvas id="boardCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+
+          <!-- Live Telemetry HUD -->
+          <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-200 pointer-events-none flex flex-col gap-1 max-w-sm">
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-2">
+                <span id="magnetIndicator" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+                <span id="magnetStatusText" class="font-semibold">12V Magnet: OFF</span>
+              </div>
+              <span id="hoverSquareBadge" class="font-mono text-sky-400">Square: --</span>
+            </div>
+            <div id="hudStepText" class="text-slate-300 font-medium">Ready — Click any White or Black piece to move</div>
+            <div id="hudCoordsText" class="text-slate-400 font-mono">Gantry X: 225.0 mm | Y: 225.0 mm</div>
+          </div>
+
+          <!-- Playback Controls Overlay (Top Right) -->
+          <div class="absolute top-3 right-3 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-lg p-1.5 text-xs flex items-center gap-1.5">
+            <button id="pauseBtn" onclick="togglePause()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium">
+              Pause
+            </button>
+            <button onclick="skipCurrentAnimation()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium">
+              Finish Move Instantly
+            </button>
+          </div>
+
+          <!-- Legend Overlay -->
+          <div class="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-300 pointer-events-none flex flex-wrap items-center gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span>Straight Path</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>Square-Edge Nudge</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>Restore Center</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>Electromagnet ON</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar: Interactive 2D Controller, Parameters & Command Log (4 cols) -->
+      <div class="lg:col-span-4 flex flex-col gap-3">
+        <!-- Interactive 2D Board & Manual Move Controller -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold text-slate-100">Interactive Piece Controller (White &amp; Black)</h2>
+              <p class="text-xs text-slate-400">Click pieces in 3D or on this 2D grid — you control both sides</p>
+            </div>
+            <button onclick="clearSelection()" class="px-2 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+              Deselect
+            </button>
+          </div>
+
+          <!-- 2D Quick-Click Grid (8x8 playable + Graveyard indicators) -->
+          <div class="flex items-center justify-center">
+            <div id="miniBoardGrid" class="grid grid-cols-8 border-2 border-slate-700 rounded overflow-hidden w-full max-w-[280px] aspect-square"></div>
+          </div>
+
+          <!-- Quick Algebraic Move Input + Promotion Picker -->
+          <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800 text-xs">
+            <input id="algebraicInput" type="text" placeholder="e.g. g1f3, e2e4, c1g5" class="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-sky-500" onkeydown="if(event.key==='Enter') executeAlgebraicInput()" />
+            <button onclick="executeAlgebraicInput()" class="px-3 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-semibold transition">
+              Run Move
+            </button>
+            <select id="promoSelect" class="bg-slate-800 text-slate-200 border border-slate-700 rounded px-2 py-1.5 text-xs" title="Promotion Piece">
+              <option value="Q">Promote: Queen (Q)</option>
+              <option value="R">Promote: Rook (R)</option>
+              <option value="B">Promote: Bishop (B)</option>
+              <option value="N">Promote: Knight (N)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Hardware & Algorithm Parameters Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-100">Dimensions &amp; Nudge Parameters</h2>
+            <span class="text-xs text-slate-400">Live-adjustable</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 text-xs">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Square Size</span>
+                <span id="lblSquareMm" class="font-mono font-semibold text-slate-200">50 mm</span>
+              </div>
+              <input type="range" min="35" max="65" step="1" value="50" oninput="updateParam('squareMm', this.value)" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Piece Base &Oslash;</span>
+                <span id="lblPieceMm" class="font-mono font-semibold text-slate-200">26 mm</span>
+              </div>
+              <input type="range" min="16" max="38" step="1" value="26" oninput="updateParam('pieceDiaMm', this.value)" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Edge Nudge Offset</span>
+                <span id="lblNudgeRatio" class="font-mono font-semibold text-slate-200">34%</span>
+              </div>
+              <input type="range" min="20" max="42" step="1" value="34" oninput="updateParam('nudgePct', this.value)" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Gantry Speed</span>
+                <span id="lblSimSpeed" class="font-mono font-semibold text-slate-200">1.2x</span>
+              </div>
+              <input type="range" min="0.4" max="3.5" step="0.2" value="1.2" oninput="updateParam('simSpeed', this.value)" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Planned Gantry & Magnet Command Log -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-lg flex-1 flex flex-col min-h-[210px] max-h-[260px]">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-slate-100">Gantry Execution Queue (ESP32 Core 1)</h2>
+            <span id="cmdCountBadge" class="px-2 py-0.5 text-xs rounded bg-slate-800 text-slate-300 font-mono">0 cmds</span>
+          </div>
+          <div id="cmdLogContainer" class="custom-scroll overflow-y-auto flex-1 flex flex-col gap-1.5 pr-1 text-xs font-mono">
+            <div class="text-slate-400 italic">Click any White or Black piece and select a target square to generate collision-free gantry commands...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // PROJECT 64: AUTONOMOUS CHESSBOARD ALGORITHM & 3D ENGINE
+    // ============================================================================
+
+    const CONFIG = {
+      squareMm: 50,
+      pieceDiaMm: 26,
+      safetyMarginMm: 3,
+      nudgeRatio: 0.34, // fraction of square width to push blocking piece toward square edge/corner
+      simSpeed: 1.2,
+      xray: true,
+      showRadii: true,
+      showMoveGuides: true,
+      paused: false
+    };
+
+    // Coordinate system:
+    // Playable board: col in [0..7] (a..h), row in [0..7] (ranks 1..8)
+    // Left Side Graveyard (16 slots):
+    //   col = -2 : White Pawns / Outer Edge (rows 0..7)
+    //   col = -1 : White Heavy Pieces / Inner Edge (rows 0..7)
+    // Right Side Graveyard (16 slots):
+    //   col =  8 : Black Heavy Pieces / Inner Edge (rows 0..7)
+    //   col =  9 : Black Pawns / Outer Edge (rows 0..7)
+
+    let pieces = [];
+    let selectedPieceId = null;
+    let suggestedMoves = []; // [{col, row, isCapture, isCastle}]
+    let commandQueue = [];
+    let activeCmdIndex = -1;
+    let activeCmdProgress = 0;
+    let plannedSegments = []; // For 3D path overlay
+
+    // Gantry state (in square units, where (col+0.5, row+0.5) is square center)
+    const gantry = {
+      x: 4.0,
+      y: 4.0,
+      magnetOn: false,
+      carryingPieceId: null
+    };
+
+    let nextPieceId = 1;
+
+    function squareCenter(col, row) {
+      return { x: col + 0.5, y: row + 0.5 };
+    }
+
+    function fileRankLabel(col, row) {
+      if (col >= 0 && col <= 7) {
+        return String.fromCharCode(97 + col) + (row + 1);
+      }
+      if (col === -2) return `L-Pawn[${row + 1}]`;
+      if (col === -1) return `L-Heavy[${row + 1}]`;
+      if (col === 8) return `R-Heavy[${row + 1}]`;
+      if (col === 9) return `R-Pawn[${row + 1}]`;
+      return `(${col},${row})`;
+    }
+
+    function addPiece(type, color, col, row, isReserve = false) {
+      const c = squareCenter(col, row);
+      pieces.push({
+        id: nextPieceId++,
+        type, // 'P','N','B','R','Q','K'
+        color, // 'W','B'
+        col,
+        row,
+        x: c.x,
+        y: c.y,
+        isReserve,
+        nudged: false,
+        hasMoved: false
+      });
+    }
+
+    function resetBoardStandard() {
+      commandQueue = [];
+      activeCmdIndex = -1;
+      plannedSegments = [];
+      selectedPieceId = null;
+      suggestedMoves = [];
+      gantry.magnetOn = false;
+      gantry.carryingPieceId = null;
+      pieces = [];
+      nextPieceId = 1;
+      sideToMove = 'W';
+      lastMove = null;
+      gameStatus = '';
+      gameOver = false;
+      updateTurnBadge();
+
+      const backRank = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'];
+      for (let c = 0; c < 8; c++) {
+        addPiece(backRank[c], 'W', c, 0);
+        addPiece('P', 'W', c, 1);
+        addPiece('P', 'B', c, 6);
+        addPiece(backRank[c], 'B', c, 7);
+      }
+
+      // Keep one extra queen in reserve for promotion.
+      addPiece('Q', 'W', -1, 7, true);
+      addPiece('Q', 'B', 8, 0, true);
+
+      renderCommandLog();
+      renderMiniBoard();
+      updateHud('Standard board ready — White to move');
+    }
+
+    // ============================================================================
+    // CHESS RULES ENGINE (legal move generation: check, pins, castling, en passant)
+    // ============================================================================
+
+    let sideToMove = 'W';
+    let lastMove = null; // {col, fromRow, toRow, color} for a pawn double-step, else null (en passant)
+    let gameStatus = '';  // '', check text, or game-over text
+    let gameOver = false;
+
+    const otherColor = c => (c === 'W' ? 'B' : 'W');
+    const colorName = c => (c === 'W' ? 'White' : 'Black');
+
+    function buildGrid(list) {
+      const g = Array.from({ length: 8 }, () => Array(8).fill(null));
+      for (const p of list) {
+        if (p.col >= 0 && p.col <= 7 && p.row >= 0 && p.row <= 7) {
+          g[p.row][p.col] = { id: p.id, type: p.type, color: p.color, hasMoved: !!p.hasMoved };
+        }
+      }
+      return g;
+    }
+
+    const inBoard = (c, r) => c >= 0 && c <= 7 && r >= 0 && r <= 7;
+    const KNIGHT_JUMPS = [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+    const DIAG_DIRS = [[1,1],[1,-1],[-1,1],[-1,-1]];
+    const ORTHO_DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+
+    function isAttacked(g, c, r, byColor) {
+      const pawnDir = byColor === 'W' ? 1 : -1;
+      for (const dc of [-1, 1]) {
+        const pc = c + dc, pr = r - pawnDir;
+        if (inBoard(pc, pr) && g[pr][pc] && g[pr][pc].type === 'P' && g[pr][pc].color === byColor) return true;
+      }
+      for (const [dc, dr] of KNIGHT_JUMPS) {
+        const pc = c + dc, pr = r + dr;
+        if (inBoard(pc, pr) && g[pr][pc] && g[pr][pc].type === 'N' && g[pr][pc].color === byColor) return true;
+      }
+      for (let dc = -1; dc <= 1; dc++) {
+        for (let dr = -1; dr <= 1; dr++) {
+          if (!dc && !dr) continue;
+          const pc = c + dc, pr = r + dr;
+          if (inBoard(pc, pr) && g[pr][pc] && g[pr][pc].type === 'K' && g[pr][pc].color === byColor) return true;
+        }
+      }
+      const rays = [[DIAG_DIRS, 'B'], [ORTHO_DIRS, 'R']];
+      for (const [dirs, slider] of rays) {
+        for (const [dc, dr] of dirs) {
+          let pc = c + dc, pr = r + dr;
+          while (inBoard(pc, pr)) {
+            const t = g[pr][pc];
+            if (t) {
+              if (t.color === byColor && (t.type === slider || t.type === 'Q')) return true;
+              break;
+            }
+            pc += dc; pr += dr;
+          }
+        }
+      }
+      return false;
+    }
+
+    function isKingInCheck(g, color) {
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const t = g[r][c];
+          if (t && t.type === 'K' && t.color === color) return isAttacked(g, c, r, otherColor(color));
+        }
+      }
+      return false;
+    }
+
+    // Moves that ignore whether the mover's own king ends up attacked
+    function pseudoLegalMoves(g, c, r, epTarget) {
+      const piece = g[r][c];
+      const moves = [];
+      const color = piece.color;
+      const add = (tc, tr) => {
+        if (!inBoard(tc, tr)) return false;
+        const t = g[tr][tc];
+        if (!t) { moves.push({ col: tc, row: tr, isCapture: false }); return true; }
+        if (t.color !== color) moves.push({ col: tc, row: tr, isCapture: true });
+        return false;
+      };
+
+      if (piece.type === 'P') {
+        const dir = color === 'W' ? 1 : -1;
+        const startRow = color === 'W' ? 1 : 6;
+        if (inBoard(c, r + dir) && !g[r + dir][c]) {
+          moves.push({ col: c, row: r + dir, isCapture: false });
+          if (r === startRow && !g[r + 2 * dir][c]) moves.push({ col: c, row: r + 2 * dir, isCapture: false });
+        }
+        for (const dc of [-1, 1]) {
+          const tc = c + dc, tr = r + dir;
+          if (!inBoard(tc, tr)) continue;
+          const t = g[tr][tc];
+          if (t && t.color !== color) moves.push({ col: tc, row: tr, isCapture: true });
+          else if (!t && epTarget && epTarget.col === tc && epTarget.row === tr) {
+            moves.push({ col: tc, row: tr, isCapture: true, isEP: true });
+          }
+        }
+      } else if (piece.type === 'N') {
+        for (const [dc, dr] of KNIGHT_JUMPS) add(c + dc, r + dr);
+      } else if (piece.type === 'K') {
+        for (let dc = -1; dc <= 1; dc++) {
+          for (let dr = -1; dr <= 1; dr++) if (dc || dr) add(c + dc, r + dr);
+        }
+      } else {
+        const dirs = [];
+        if (piece.type !== 'R') dirs.push(...DIAG_DIRS);
+        if (piece.type !== 'B') dirs.push(...ORTHO_DIRS);
+        for (const [dc, dr] of dirs) {
+          for (let s = 1; s < 8; s++) if (!add(c + dc * s, r + dr * s)) break;
+        }
+      }
+      return moves;
+    }
+
+    function legalMovesOnGrid(g, c, r, epTarget) {
+      const piece = g[r][c];
+      if (!piece) return [];
+      const enemy = otherColor(piece.color);
+      const legal = [];
+
+      for (const m of pseudoLegalMoves(g, c, r, epTarget)) {
+        const sim = g.map(row => row.slice());
+        sim[m.row][m.col] = sim[r][c];
+        sim[r][c] = null;
+        if (m.isEP) sim[r][m.col] = null; // captured pawn sits beside the mover's origin
+        if (!isKingInCheck(sim, piece.color)) legal.push(m);
+      }
+
+      if (piece.type === 'K' && !piece.hasMoved && c === 4 && r === (piece.color === 'W' ? 0 : 7) && !isAttacked(g, c, r, enemy)) {
+        const rookAt = col => g[r][col] && g[r][col].type === 'R' && g[r][col].color === piece.color && !g[r][col].hasMoved;
+        if (rookAt(7) && !g[r][5] && !g[r][6] && !isAttacked(g, 5, r, enemy) && !isAttacked(g, 6, r, enemy)) {
+          legal.push({ col: 6, row: r, isCapture: false, isCastle: true });
+        }
+        if (rookAt(0) && !g[r][1] && !g[r][2] && !g[r][3] && !isAttacked(g, 3, r, enemy) && !isAttacked(g, 2, r, enemy)) {
+          legal.push({ col: 2, row: r, isCapture: false, isCastle: true });
+        }
+      }
+      return legal;
+    }
+
+    function currentEpTarget() {
+      if (!lastMove) return null;
+      return { col: lastMove.col, row: (lastMove.fromRow + lastMove.toRow) / 2 };
+    }
+
+    // Legal moves for a piece on the playable board; empty unless it belongs to the side to move
+    function computeChessGuidesForPiece(piece) {
+      if (!piece || piece.col < 0 || piece.col > 7 || piece.color !== sideToMove) return [];
+      return legalMovesOnGrid(buildGrid(pieces), piece.col, piece.row, currentEpTarget());
+    }
+
+    function updateTurnBadge() {
+      const badge = document.getElementById('turnBadge');
+      if (!badge) return;
+      badge.textContent = gameStatus ? `${gameStatus}` : `Turn: ${colorName(sideToMove)}`;
+    }
+
+    // Evaluates check / checkmate / stalemate for the side to move on the given (post-move) piece list
+    function updateGameStatus(list) {
+      const g = buildGrid(list);
+      const ep = currentEpTarget();
+      const inCheck = isKingInCheck(g, sideToMove);
+      let hasMove = false;
+      for (let r = 0; r < 8 && !hasMove; r++) {
+        for (let c = 0; c < 8 && !hasMove; c++) {
+          if (g[r][c] && g[r][c].color === sideToMove && legalMovesOnGrid(g, c, r, ep).length) hasMove = true;
+        }
+      }
+      gameOver = !hasMove;
+      if (!hasMove) gameStatus = inCheck ? `Checkmate — ${colorName(otherColor(sideToMove))} wins` : 'Stalemate — draw';
+      else gameStatus = inCheck ? `${colorName(sideToMove)} is in check` : '';
+      updateTurnBadge();
+    }
+
+    // Commits a user move that has already been validated as legal
+    function playUserMove(piece, move, promoType = null) {
+      const fromRow = piece.row;
+      const isDoubleStep = piece.type === 'P' && Math.abs(move.row - fromRow) === 2;
+      piece.hasMoved = true;
+      const finalState = planCompleteChessMove(piece.id, move.col, move.row, {
+        enPassant: !!move.isEP,
+        ...(promoType ? { promoType } : {})
+      });
+      lastMove = isDoubleStep ? { col: move.col, fromRow, toRow: move.row, color: piece.color } : null;
+      sideToMove = otherColor(sideToMove);
+      updateGameStatus(finalState);
+    }
+
+    // ============================================================================
+    // COLLISION DETECTION & SQUARE-EDGE NUDGING PATH PLANNER
+    // ============================================================================
+
+    function pointToSegmentDist(px, py, ax, ay, bx, by) {
+      const vx = bx - ax;
+      const vy = by - ay;
+      const lenSq = vx * vx + vy * vy;
+      let t = 0;
+      if (lenSq > 1e-6) {
+        t = ((px - ax) * vx + (py - ay) * vy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+      }
+      const cx = ax + t * vx;
+      const cy = ay + t * vy;
+      const dx = px - cx;
+      const dy = py - cy;
+      return { dist: Math.hypot(dx, dy), cx, cy, t };
+    }
+
+    // Transit lanes: one-square-wide strips in front of rank 1 and behind rank 8 (row -1 and row 8).
+    // They are always empty and let the gantry carry a piece around the board without disturbing others.
+    const LANE_FRONT_Y = -0.5;
+    const LANE_BACK_Y = 8.5;
+
+    const HEAVY_ORDER = ['Q', 'Q', 'R', 'R', 'B', 'B', 'N', 'N'];
+    function slotType(col, row) {
+      if (col === -2 || col === 9) return 'P';
+      return col < 4 ? HEAVY_ORDER[7 - row] : HEAVY_ORDER[row];
+    }
+
+    function findGraveyardSlot(color, type, virtualPieces, nearRow = 3.5) {
+      // 16 spots on each side:
+      // Pawns -> outer edge (col -2 for White/Left, col 9 for Black/Right)
+      // Heavy pieces -> inner edge (col -1 for White/Left, col 8 for Black/Right)
+      // Returns every free slot of the primary column (or the companion column when the primary is full),
+      // ordered by closeness to `nearRow`.
+      const isPawn = (type === 'P');
+      const primaryCol = (color === 'W') ? (isPawn ? -2 : -1) : (isPawn ? 9 : 8);
+      const secondaryCol = (color === 'W') ? (isPawn ? -1 : -2) : (isPawn ? 8 : 9);
+      const rowsByDistance = [0, 1, 2, 3, 4, 5, 6, 7].sort((a, b) => Math.abs(a - nearRow) - Math.abs(b - nearRow));
+
+      for (const col of [primaryCol, secondaryCol]) {
+        const free = rowsByDistance
+          .filter(r => !virtualPieces.some(p => p.col === col && p.row === r))
+          .map(r => ({ col, row: r }));
+        const matching = free.filter(s => slotType(s.col, s.row) === type);
+        if (matching.length) return matching;
+        if (free.length) return free;
+      }
+      return [{ col: primaryCol, row: 0 }];
+    }
+
+    // Distance from a piece center below which nudging cannot clear it: a nudge only moves a piece
+    // `nudgeRatio` away, so anything closer than (clearance - nudgeRatio) to the path is a hard blocker.
+    function clearanceRadii() {
+      const trigger = Math.max((CONFIG.pieceDiaMm + CONFIG.safetyMarginMm) / CONFIG.squareMm, 0.56);
+      const hard = Math.max(trigger - CONFIG.nudgeRatio, 0.05) + 0.03;
+      return { trigger, hard };
+    }
+
+    function isStraightPathClear(vPieces, piece, destX, destY) {
+      const { hard } = clearanceRadii();
+      return !vPieces.some(o => o.id !== piece.id &&
+        pointToSegmentDist(o.x, o.y, piece.x, piece.y, destX, destY).dist < hard);
+    }
+
+    /**
+     * Finds the cheapest route over a half-square lattice that also covers the graveyards and both transit lanes.
+     *   - never passes through (or too close to) a piece that nudging cannot clear
+     *   - prefers X/Y legs, few turns and few nudged neighbours (travelling along a gap between two pieces
+     *     nudges both sideways); 45-degree steps carry a heavy penalty, so they are used only when necessary
+     * Returns {cost, waypoints} with the interior turning points, or waypoints = null if no route exists.
+     */
+    function findRoute(vPieces, piece, destX, destY) {
+      const { trigger, hard } = clearanceRadii();
+      const others = vPieces.filter(p => p.id !== piece.id);
+      const MIN_X = -4, MAX_X = 20, MIN_Y = -2, MAX_Y = 18, W = MAX_X - MIN_X + 1, H = MAX_Y - MIN_Y + 1;
+      const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+      const DIAG_MULT = 4, TURN_PEN = 0.3, NUDGE_PEN = 0.8;
+      const nodeId = (ix, iy) => (iy - MIN_Y) * W + (ix - MIN_X);
+      const stateCount = W * H * 9;
+
+      const edgeCache = new Map();
+      function edgeNudges(ix, iy, d) {
+        const key = nodeId(ix, iy) * 8 + d;
+        if (edgeCache.has(key)) return edgeCache.get(key);
+        const ax = ix / 2, ay = iy / 2, bx = (ix + DIRS[d][0]) / 2, by = (iy + DIRS[d][1]) / 2;
+        let n = 0;
+        for (const o of others) {
+          const { dist } = pointToSegmentDist(o.x, o.y, ax, ay, bx, by);
+          if (dist < hard) { n = -1; break; }
+          if (dist < trigger) n++;
+        }
+        edgeCache.set(key, n);
+        return n;
+      }
+
+      const sx = Math.round(piece.x * 2), sy = Math.round(piece.y * 2);
+      const tx = Math.round(destX * 2), ty = Math.round(destY * 2);
+      const best = new Float64Array(stateCount).fill(Infinity);
+      const prev = new Int32Array(stateCount).fill(-1);
+      const heap = [];
+      const push = (cost, s) => {
+        heap.push([cost, s]);
+        let i = heap.length - 1;
+        while (i > 0) {
+          const p = (i - 1) >> 1;
+          if (heap[p][0] <= heap[i][0]) break;
+          [heap[p], heap[i]] = [heap[i], heap[p]];
+          i = p;
+        }
+      };
+      const pop = () => {
+        const top = heap[0], last = heap.pop();
+        if (heap.length) {
+          heap[0] = last;
+          let i = 0;
+          for (;;) {
+            const l = 2 * i + 1, r = l + 1;
+            let m = i;
+            if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+            if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+            if (m === i) break;
+            [heap[m], heap[i]] = [heap[i], heap[m]];
+            i = m;
+          }
+        }
+        return top;
+      };
+
+      const startState = nodeId(sx, sy) * 9 + 8;
+      best[startState] = 0;
+      push(0, startState);
+      let goalState = -1;
+      while (heap.length) {
+        const [cost, s] = pop();
+        if (cost > best[s]) continue;
+        const node = Math.floor(s / 9), dirIn = s % 9;
+        const ix = (node % W) + MIN_X, iy = Math.floor(node / W) + MIN_Y;
+        if (ix === tx && iy === ty) { goalState = s; break; }
+        for (let d = 0; d < 8; d++) {
+          const nx = ix + DIRS[d][0], ny = iy + DIRS[d][1];
+          if (nx < MIN_X || nx > MAX_X || ny < MIN_Y || ny > MAX_Y) continue;
+          const nudges = edgeNudges(ix, iy, d);
+          if (nudges < 0) continue;
+          const diag = d >= 4;
+          const stepCost = (diag ? 0.5 * Math.SQRT2 * DIAG_MULT : 0.5) + nudges * NUDGE_PEN +
+            (dirIn !== 8 && dirIn !== d ? TURN_PEN : 0);
+          const ns = nodeId(nx, ny) * 9 + d;
+          if (cost + stepCost < best[ns]) {
+            best[ns] = cost + stepCost;
+            prev[ns] = s;
+            push(best[ns], ns);
+          }
+        }
+      }
+      if (goalState < 0) return { cost: Infinity, waypoints: null };
+
+      const nodes = [];
+      for (let s = goalState; s >= 0; s = prev[s]) {
+        const node = Math.floor(s / 9);
+        nodes.push({ x: ((node % W) + MIN_X) / 2, y: (Math.floor(node / W) + MIN_Y) / 2, d: s % 9 });
+      }
+      nodes.reverse();
+      const waypoints = [];
+      for (let i = 1; i < nodes.length - 1; i++) {
+        if (nodes[i + 1].d !== nodes[i].d) waypoints.push({ x: nodes[i].x, y: nodes[i].y });
+      }
+      return { cost: best[goalState], waypoints };
+    }
+
+    /**
+     * Route for one piece. Pieces that move like a line (pawn, bishop, rook, queen, king) travel straight when
+     * nothing sits on that line; knights, escorted/captured pieces and anything blocked use findRoute.
+     */
+    function planRoute(vPieces, piece, destX, destY, allowStraight) {
+      if (allowStraight && isStraightPathClear(vPieces, piece, destX, destY)) {
+        return { cost: Math.hypot(destX - piece.x, destY - piece.y), waypoints: [] };
+      }
+      const route = findRoute(vPieces, piece, destX, destY);
+      return route.waypoints ? route : { cost: Infinity, waypoints: [] };
+    }
+
+    // Picks the free graveyard slot (and route to it) with the lowest total cost for this piece
+    function chooseGraveyardTrip(vPieces, piece) {
+      let best = null;
+      for (const slot of findGraveyardSlot(piece.color, piece.type, vPieces, piece.row)) {
+        const c = squareCenter(slot.col, slot.row);
+        const route = planRoute(vPieces, piece, c.x, c.y, false);
+        if (!best || route.cost < best.route.cost) best = { slot, route };
+      }
+      return best;
+    }
+
+    /**
+     * Plans a straight-line move for `movingPiece` from its current position to `(destX, destY)`.
+     * Any piece whose clearance zone intersects the straight path is:
+     *   1. Nudged to the safe edge/corner of its own square away from the path
+     *   2. Passed by the active piece moving in a straight line
+     *   3. Restored back from the square edge to its square center
+     */
+    function planStraightSegmentWithEdgeNudging(vPieces, movingPiece, destX, destY, cmds, segs, simGantry, label, waypoints = null) {
+      const startX = movingPiece.x;
+      const startY = movingPiece.y;
+      const path = [{ x: startX, y: startY }, ...(waypoints || []), { x: destX, y: destY }];
+      if (Math.hypot(destX - startX, destY - startY) < 1e-4 && path.length === 2) return;
+
+      // Minimum center-to-center distance in square units
+      const minClearanceSq = (CONFIG.pieceDiaMm + CONFIG.safetyMarginMm) / CONFIG.squareMm;
+      const triggerRadius = Math.max(minClearanceSq, 0.56);
+      const maxNudge = CONFIG.nudgeRatio;
+
+      // Find all pieces along every leg of the path that need to be nudged to their square edge
+      const blockers = [];
+      for (let li = 0; li < path.length - 1; li++) {
+      const legAx = path[li].x, legAy = path[li].y, legBx = path[li + 1].x, legBy = path[li + 1].y;
+      const legLen = Math.hypot(legBx - legAx, legBy - legAy);
+      if (legLen < 1e-4) continue;
+      // Unit normal to this leg
+      const nx = -(legBy - legAy) / legLen;
+      const ny = (legBx - legAx) / legLen;
+      for (const other of vPieces) {
+        if (other.id === movingPiece.id) continue;
+        if (blockers.some(b => b.piece.id === other.id)) continue;
+        const { dist, cx, cy, t } = pointToSegmentDist(other.x, other.y, legAx, legAy, legBx, legBy);
+        if (li === 0 && t <= 0.01) continue; // Ignore the start of the whole path
+        if (li === path.length - 2 && t >= 0.99) continue; // Ignore the end of the whole path
+
+        if (dist < triggerRadius) {
+          let offX = other.x - cx;
+          let offY = other.y - cy;
+          const offLen = Math.hypot(offX, offY);
+          let pushX, pushY;
+
+          if (offLen > 1e-3) {
+            pushX = offX / offLen;
+            pushY = offY / offLen;
+          } else {
+            // Piece center sits directly on the line: push perpendicular to the line
+            pushX = nx;
+            pushY = ny;
+          }
+
+          const sqCenter = squareCenter(other.col, other.row);
+          const scale = Math.max(Math.abs(pushX), Math.abs(pushY), 0.707);
+          const nudgeX = Math.max(sqCenter.x - maxNudge, Math.min(sqCenter.x + maxNudge, sqCenter.x + (pushX / scale) * maxNudge));
+          const nudgeY = Math.max(sqCenter.y - maxNudge, Math.min(sqCenter.y + maxNudge, sqCenter.y + (pushY / scale) * maxNudge));
+
+          blockers.push({
+            piece: other,
+            leg: li,
+            t,
+            origX: other.x,
+            origY: other.y,
+            nudgeX,
+            nudgeY
+          });
+        }
+      }
+      }
+
+      blockers.sort((a, b) => a.leg - b.leg || a.t - b.t);
+
+      // 1. Nudge each blocking piece to the edge of its square
+      for (const b of blockers) {
+        const pName = `${b.piece.color}${b.piece.type}@${fileRankLabel(b.piece.col, b.piece.row)}`;
+        cmds.push({
+          type: 'TRAVEL',
+          fromX: simGantry.x, fromY: simGantry.y,
+          toX: b.origX, toY: b.origY,
+          pieceId: null,
+          desc: `Travel to blocker ${pName}`
+        });
+        cmds.push({
+          type: 'MAGNET_ON',
+          x: b.origX, y: b.origY,
+          pieceId: b.piece.id,
+          desc: `Magnet ON (${pName})`
+        });
+        cmds.push({
+          type: 'NUDGE_EDGE',
+          fromX: b.origX, fromY: b.origY,
+          toX: b.nudgeX, toY: b.nudgeY,
+          pieceId: b.piece.id,
+          desc: `Nudge ${pName} to square edge`
+        });
+        segs.push({
+          kind: 'nudge',
+          ax: b.origX, ay: b.origY,
+          bx: b.nudgeX, by: b.nudgeY
+        });
+        cmds.push({
+          type: 'MAGNET_OFF',
+          x: b.nudgeX, y: b.nudgeY,
+          pieceId: b.piece.id,
+          desc: `Magnet OFF (hold ${pName} at edge)`
+        });
+
+        simGantry.x = b.nudgeX;
+        simGantry.y = b.nudgeY;
+        b.piece.x = b.nudgeX;
+        b.piece.y = b.nudgeY;
+      }
+
+      // 2. Move the active piece in a straight line to destination
+      const activeName = `${movingPiece.color}${movingPiece.type}`;
+      cmds.push({
+        type: 'TRAVEL',
+        fromX: simGantry.x, fromY: simGantry.y,
+        toX: startX, toY: startY,
+        pieceId: null,
+        desc: `Travel to active piece ${activeName}`
+      });
+      cmds.push({
+        type: 'MAGNET_ON',
+        x: startX, y: startY,
+        pieceId: movingPiece.id,
+        desc: `Magnet ON (${activeName})`
+      });
+      for (let li = 0; li < path.length - 1; li++) {
+        const legDesc = path.length > 2 ? `${label} [leg ${li + 1}/${path.length - 1}]` : label;
+        cmds.push({
+          type: 'MOVE_MAIN',
+          fromX: path[li].x, fromY: path[li].y,
+          toX: path[li + 1].x, toY: path[li + 1].y,
+          pieceId: movingPiece.id,
+          desc: legDesc
+        });
+        segs.push({
+          kind: 'main',
+          ax: path[li].x, ay: path[li].y,
+          bx: path[li + 1].x, by: path[li + 1].y
+        });
+      }
+      cmds.push({
+        type: 'MAGNET_OFF',
+        x: destX, y: destY,
+        pieceId: movingPiece.id,
+        desc: `Magnet OFF (${activeName} placed)`
+      });
+
+      simGantry.x = destX;
+      simGantry.y = destY;
+      movingPiece.x = destX;
+      movingPiece.y = destY;
+
+      // 3. Restore nudged pieces from the edge of their square back to square center (reverse order)
+      for (let i = blockers.length - 1; i >= 0; i--) {
+        const b = blockers[i];
+        const pName = `${b.piece.color}${b.piece.type}@${fileRankLabel(b.piece.col, b.piece.row)}`;
+        cmds.push({
+          type: 'TRAVEL',
+          fromX: simGantry.x, fromY: simGantry.y,
+          toX: b.nudgeX, toY: b.nudgeY,
+          pieceId: null,
+          desc: `Return to nudged ${pName}`
+        });
+        cmds.push({
+          type: 'MAGNET_ON',
+          x: b.nudgeX, y: b.nudgeY,
+          pieceId: b.piece.id,
+          desc: `Magnet ON (${pName})`
+        });
+        cmds.push({
+          type: 'RESTORE_CENTER',
+          fromX: b.nudgeX, fromY: b.nudgeY,
+          toX: b.origX, toY: b.origY,
+          pieceId: b.piece.id,
+          desc: `Restore ${pName} to square center`
+        });
+        segs.push({
+          kind: 'restore',
+          ax: b.nudgeX, ay: b.nudgeY,
+          bx: b.origX, by: b.origY
+        });
+        cmds.push({
+          type: 'MAGNET_OFF',
+          x: b.origX, y: b.origY,
+          pieceId: b.piece.id,
+          desc: `Magnet OFF (${pName} centered)`
+        });
+
+        simGantry.x = b.origX;
+        simGantry.y = b.origY;
+        b.piece.x = b.origX;
+        b.piece.y = b.origY;
+      }
+    }
+
+    /**
+     * Plans a complete chess move (including captures to 16-slot graveyard, castling, and promotions)
+     */
+    function planCompleteChessMove(pieceId, targetCol, targetRow, options = {}) {
+      const vPieces = pieces.map(p => ({ ...p }));
+      const moving = vPieces.find(p => p.id === pieceId);
+      if (!moving) return;
+
+      const cmds = [];
+      const segs = [];
+      const simGantry = { x: gantry.x, y: gantry.y };
+
+      // 1. Check if there is a captured piece (en passant captures the pawn beside the mover)
+      const capCol = targetCol;
+      const capRow = options.enPassant ? moving.row : targetRow;
+      const captured = vPieces.find(p => p.id !== moving.id && p.col === capCol && p.row === capRow);
+      if (captured) {
+        const trip = chooseGraveyardTrip(vPieces, captured);
+        const graveSlot = trip.slot;
+        const graveCenter = squareCenter(graveSlot.col, graveSlot.row);
+        const slotDesc = (captured.type === 'P') ? 'Outer Pawn Slot' : 'Inner Heavy Slot';
+        planStraightSegmentWithEdgeNudging(
+          vPieces,
+          captured,
+          graveCenter.x,
+          graveCenter.y,
+          cmds,
+          segs,
+          simGantry,
+          `Capture: Escort ${captured.color}${captured.type} -> ${fileRankLabel(graveSlot.col, graveSlot.row)} (${slotDesc})`,
+          trip.route.waypoints
+        );
+        captured.col = graveSlot.col;
+        captured.row = graveSlot.row;
+      }
+
+      // 2. Move the active piece to (targetCol, targetRow).
+      // 2. Move the active piece to (targetCol, targetRow). A promoting pawn also travels to the last rank;
+      // it is retired to the graveyard in step 4.
+      const destCenter = squareCenter(targetCol, targetRow);
+      const fromLabel = fileRankLabel(moving.col, moving.row);
+      const toLabel = fileRankLabel(targetCol, targetRow);
+      const prevCol = moving.col;
+      const prevRow = moving.row;
+      const isPromo = (moving.type === 'P') && ((moving.color === 'W' && targetRow === 7) || (moving.color === 'B' && targetRow === 0));
+      const promoting = isPromo || !!options.forcePromotion;
+      {
+        const route = planRoute(vPieces, moving, destCenter.x, destCenter.y, moving.type !== 'N');
+        planStraightSegmentWithEdgeNudging(
+          vPieces,
+          moving,
+          destCenter.x,
+          destCenter.y,
+          cmds,
+          segs,
+          simGantry,
+          `Move ${moving.color}${moving.type}: ${fromLabel} -> ${toLabel}`,
+          route.waypoints
+        );
+        moving.col = targetCol;
+        moving.row = targetRow;
+      }
+
+      // 3. Check Castling (King moved 2 files horizontally)
+      if (moving.type === 'K' && Math.abs(targetCol - prevCol) === 2 && targetRow === prevRow) {
+        const isKingside = targetCol > prevCol;
+        const rookFromCol = isKingside ? 7 : 0;
+        const rookToCol = isKingside ? 5 : 3;
+        const rook = vPieces.find(p => p.color === moving.color && p.type === 'R' && p.col === rookFromCol && p.row === prevRow);
+        if (rook) {
+          const rookDest = squareCenter(rookToCol, prevRow);
+          const rookRoute = planRoute(vPieces, rook, rookDest.x, rookDest.y, true);
+          planStraightSegmentWithEdgeNudging(
+            vPieces,
+            rook,
+            rookDest.x,
+            rookDest.y,
+            cmds,
+            segs,
+            simGantry,
+            `Castle Rook: ${fileRankLabel(rookFromCol, prevRow)} -> ${fileRankLabel(rookToCol, prevRow)}`,
+            rookRoute.waypoints
+          );
+          rook.col = rookToCol;
+        }
+      }
+
+      // 4. Pawn Promotion (Pawn reaches rank 8 [row 7] for White or rank 1 [row 0] for Black)
+      if (promoting) {
+        const desiredPromoType = options.promoType || document.getElementById('promoSelect').value || 'Q';
+
+        // 4a. Escort the pawn from the promotion square to the nearest Outer Pawn Graveyard slot
+        const pawnTrip = chooseGraveyardTrip(vPieces, moving);
+        const pawnGrave = pawnTrip.slot;
+        const pawnGravePt = squareCenter(pawnGrave.col, pawnGrave.row);
+        planStraightSegmentWithEdgeNudging(
+          vPieces,
+          moving,
+          pawnGravePt.x,
+          pawnGravePt.y,
+          cmds,
+          segs,
+          simGantry,
+          `Promotion: Retire Pawn to Outer Slot ${fileRankLabel(pawnGrave.col, pawnGrave.row)}`,
+          pawnTrip.route.waypoints
+        );
+        moving.col = pawnGrave.col;
+        moving.row = pawnGrave.row;
+
+        // 4b. Use the reserve piece of the right type that is closest to the promotion square, or spawn one
+        const reserveMatches = vPieces
+          .filter(p => p.color === moving.color && p.type === desiredPromoType && (p.col < 0 || p.col > 7))
+          .sort((a, b) => Math.hypot(a.x - destCenter.x, a.y - destCenter.y) - Math.hypot(b.x - destCenter.x, b.y - destCenter.y));
+        let promoPiece = reserveMatches[0];
+        if (!promoPiece) {
+          const reserveCol = moving.color === 'W' ? -1 : 8;
+          let reserveRow = [0, 1, 2, 3, 4, 5, 6, 7]
+            .find(r => slotType(reserveCol, r) === desiredPromoType &&
+              !vPieces.some(p => p.col === reserveCol && p.row === r));
+          if (reserveRow === undefined) {
+            reserveRow = [0, 1, 2, 3, 4, 5, 6, 7]
+              .find(r => !vPieces.some(p => p.col === reserveCol && p.row === r));
+          }
+          if (reserveRow === undefined) reserveRow = 0;
+          addPiece(desiredPromoType, moving.color, reserveCol, reserveRow, true);
+          const newlyAdded = pieces[pieces.length - 1];
+          promoPiece = { ...newlyAdded };
+          vPieces.push(promoPiece);
+        }
+
+        // 4c. Deliver the new piece to the promotion square through the transit lanes where that is cheaper
+        planStraightSegmentWithEdgeNudging(
+          vPieces,
+          promoPiece,
+          destCenter.x,
+          destCenter.y,
+          cmds,
+          segs,
+          simGantry,
+          `Promotion: Deliver ${moving.color}${desiredPromoType} from Reserve -> ${toLabel}`,
+          planRoute(vPieces, promoPiece, destCenter.x, destCenter.y, false).waypoints
+        );
+        promoPiece.col = targetCol;
+        promoPiece.row = targetRow;
+        promoPiece.isReserve = false;
+        promoPiece.hasMoved = true;
+        const realPromo = pieces.find(p => p.id === promoPiece.id);
+        if (realPromo) realPromo.hasMoved = true;
+      }
+
+      commandQueue = cmds;
+      plannedSegments = segs;
+      activeCmdIndex = 0;
+      activeCmdProgress = 0;
+      CONFIG.paused = false;
+      document.getElementById('pauseBtn').textContent = 'Pause';
+      renderCommandLog();
+      renderMiniBoard();
+      return vPieces;
+    }
+
+    // ============================================================================
+    // INTERACTIVE CONTROLS (2D MINI-BOARD, ALGEBRAIC INPUT, PLAYBACK)
+    // ============================================================================
+
+    function selectSquareOrMove(col, row) {
+      if (col < 0 || col > 7 || row < 0 || row > 7) return;
+
+      if (activeCmdIndex >= 0) {
+        finishCurrentQueueInstantly();
+      }
+      if (gameOver) {
+        updateHud(`${gameStatus} — press Reset Full Board to play again`);
+        return;
+      }
+
+      const clickedPiece = pieces.find(p => p.col === col && p.row === row);
+
+      const selectPiece = (piece, verb) => {
+        if (piece.color !== sideToMove) {
+          updateHud(`It is ${colorName(sideToMove)}'s turn`);
+          return;
+        }
+        selectedPieceId = piece.id;
+        suggestedMoves = computeChessGuidesForPiece(piece);
+        updateHud(suggestedMoves.length
+          ? `${verb} ${colorName(piece.color)} ${piece.type} at ${fileRankLabel(col, row)} — pick a highlighted square`
+          : `${colorName(piece.color)} ${piece.type} at ${fileRankLabel(col, row)} has no legal moves`);
+        renderMiniBoard();
+      };
+
+      if (selectedPieceId === null) {
+        if (clickedPiece) selectPiece(clickedPiece, 'Selected');
+      } else {
+        if (clickedPiece && clickedPiece.id === selectedPieceId) {
+          clearSelection();
+          return;
+        }
+        const movingPiece = pieces.find(p => p.id === selectedPieceId);
+        // Clicking another piece of the same color switches the selection
+        if (movingPiece && clickedPiece && clickedPiece.color === movingPiece.color) {
+          selectPiece(clickedPiece, 'Switched to');
+          return;
+        }
+        const legal = suggestedMoves.find(m => m.col === col && m.row === row);
+        if (!legal) {
+          updateHud(`Illegal move: ${fileRankLabel(col, row)} is not a legal destination for this piece`);
+          return;
+        }
+        selectedPieceId = null;
+        suggestedMoves = [];
+        playUserMove(movingPiece, legal);
+      }
+    }
+
+    function clearSelection() {
+      selectedPieceId = null;
+      suggestedMoves = [];
+      updateHud('Selection cleared — Click a piece to move');
+      renderMiniBoard();
+    }
+
+    function executeAlgebraicInput() {
+      const inputEl = document.getElementById('algebraicInput');
+      const raw = (inputEl.value || '').trim().toLowerCase().replace(/[^a-h1-8qrbn]/g, '');
+      if (raw.length < 4) {
+        updateHud('Enter move as from+to squares, e.g. "e2e4", "g1f3", "e7e8q"');
+        return;
+      }
+      const fromCol = raw.charCodeAt(0) - 97;
+      const fromRow = parseInt(raw[1], 10) - 1;
+      const toCol = raw.charCodeAt(2) - 97;
+      const toRow = parseInt(raw[3], 10) - 1;
+      const promoChar = raw[4] ? raw[4].toUpperCase() : null;
+
+      if (fromCol < 0 || fromCol > 7 || fromRow < 0 || fromRow > 7 || toCol < 0 || toCol > 7 || toRow < 0 || toRow > 7) {
+        updateHud('Invalid square coordinates');
+        return;
+      }
+
+      if (activeCmdIndex >= 0) finishCurrentQueueInstantly();
+      if (gameOver) {
+        updateHud(`${gameStatus} — press Reset Full Board to play again`);
+        return;
+      }
+
+      const p = pieces.find(piece => piece.col === fromCol && piece.row === fromRow);
+      if (!p) {
+        updateHud(`No piece found on ${fileRankLabel(fromCol, fromRow)}`);
+        return;
+      }
+      if (p.color !== sideToMove) {
+        updateHud(`It is ${colorName(sideToMove)}'s turn`);
+        return;
+      }
+      const legal = computeChessGuidesForPiece(p).find(m => m.col === toCol && m.row === toRow);
+      if (!legal) {
+        updateHud(`Illegal move: ${raw.slice(0, 4)}`);
+        return;
+      }
+
+      selectedPieceId = null;
+      suggestedMoves = [];
+      inputEl.value = '';
+      playUserMove(p, legal, promoChar && 'QRBN'.includes(promoChar) ? promoChar : null);
+    }
+
+    function renderMiniBoard() {
+      const grid = document.getElementById('miniBoardGrid');
+      if (!grid) return;
+      const symbols = {
+        W: { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙' },
+        B: { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' }
+      };
+
+      let html = '';
+      for (let r = 7; r >= 0; r--) {
+        for (let c = 0; c < 8; c++) {
+          const isLight = (c + r) % 2 === 1;
+          const p = pieces.find(piece => piece.col === c && piece.row === r);
+          const isSelected = p && p.id === selectedPieceId;
+          const isGuide = CONFIG.showMoveGuides && suggestedMoves.some(m => m.col === c && m.row === r);
+
+          let bg = isLight ? 'bg-[#d8c3a5] text-slate-900' : 'bg-[#7d5a3c] text-slate-100';
+          if (isSelected) bg = 'bg-sky-500 text-white ring-2 ring-inset ring-sky-200';
+          else if (isGuide) bg = isLight ? 'bg-emerald-300/90 text-slate-900' : 'bg-emerald-600/90 text-white';
+
+          const sym = p ? symbols[p.color][p.type] : '';
+          const pieceColorClass = p
+            ? (p.color === 'W' ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]' : 'text-slate-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]')
+            : '';
+
+          html += `
+            <button
+              onclick="selectSquareOrMove(${c}, ${r})"
+              title="${fileRankLabel(c, r)}"
+              class="${bg} flex items-center justify-center text-base md:text-lg leading-none select-none hover:brightness-110 transition relative aspect-square"
+            >
+              <span class="${pieceColorClass}">${sym}</span>
+              ${isGuide && !p ? '<span class="w-2 h-2 rounded-full bg-emerald-900/60 absolute"></span>' : ''}
+            </button>
+          `;
+        }
+      }
+      grid.innerHTML = html;
+    }
+
+    function togglePause() {
+      CONFIG.paused = !CONFIG.paused;
+      document.getElementById('pauseBtn').textContent = CONFIG.paused ? 'Resume' : 'Pause';
+    }
+
+    function skipCurrentAnimation() {
+      finishCurrentQueueInstantly();
+      renderCommandLog();
+      renderMiniBoard();
+      updateHud('Move completed instantly');
+    }
+
+    // ============================================================================
+    // PRESET DEMONSTRATION SCENARIOS
+    // ============================================================================
+
+    function finishCurrentQueueInstantly() {
+      while (activeCmdIndex >= 0 && activeCmdIndex < commandQueue.length) {
+        const cmd = commandQueue[activeCmdIndex];
+        applyCommandEndState(cmd);
+        activeCmdIndex++;
+      }
+      activeCmdIndex = -1;
+      gantry.magnetOn = false;
+      gantry.carryingPieceId = null;
+    }
+
+    function runScenario(name) {
+      finishCurrentQueueInstantly();
+      resetBoardStandard();
+
+      if (name === 'knight_nudge') {
+        const knight = pieces.find(p => p.color === 'W' && p.type === 'N' && p.col === 6 && p.row === 0);
+        if (knight) planCompleteChessMove(knight.id, 5, 2);
+      } else if (name === 'bishop_diagonal') {
+        const pD2 = pieces.find(p => p.col === 3 && p.row === 1);
+        const pE2 = pieces.find(p => p.col === 4 && p.row === 1);
+        if (pD2 && pE2) {
+          pD2.col = 4; pD2.row = 1; Object.assign(pD2, squareCenter(4, 1));
+          pE2.col = 3; pE2.row = 2; Object.assign(pE2, squareCenter(3, 2));
+        }
+        const bishop = pieces.find(p => p.color === 'W' && p.type === 'B' && p.col === 2 && p.row === 0);
+        if (bishop) planCompleteChessMove(bishop.id, 6, 4);
+      } else if (name === 'capture_graveyard') {
+        const bKnight = pieces.find(p => p.color === 'B' && p.type === 'N' && p.col === 6 && p.row === 7);
+        const wBishop = pieces.find(p => p.color === 'W' && p.type === 'B' && p.col === 2 && p.row === 0);
+        if (bKnight && wBishop) {
+          bKnight.col = 4; bKnight.row = 3; Object.assign(bKnight, squareCenter(4, 3));
+          wBishop.col = 2; wBishop.row = 1; Object.assign(wBishop, squareCenter(2, 1));
+          planCompleteChessMove(wBishop.id, 4, 3);
+        }
+      } else if (name === 'promotion') {
+        pieces = pieces.filter(p => !(p.col === 4 && p.row === 7) && !(p.col === 4 && p.row === 6));
+        const wPawn = pieces.find(p => p.color === 'W' && p.type === 'P' && p.col === 4 && p.row === 1);
+        if (wPawn) {
+          wPawn.col = 4; wPawn.row = 6; Object.assign(wPawn, squareCenter(4, 6));
+          planCompleteChessMove(wPawn.id, 4, 7);
+        }
+      } else if (name === 'castling') {
+        pieces = pieces.filter(p => !((p.col === 5 || p.col === 6) && p.row === 0));
+        const wKing = pieces.find(p => p.color === 'W' && p.type === 'K' && p.col === 4 && p.row === 0);
+        if (wKing) planCompleteChessMove(wKing.id, 6, 0);
+      }
+    }
+
+    function applyCommandEndState(cmd) {
+      if (cmd.type === 'TRAVEL') {
+        gantry.x = cmd.toX;
+        gantry.y = cmd.toY;
+      } else if (cmd.type === 'MAGNET_ON') {
+        gantry.magnetOn = true;
+        gantry.carryingPieceId = cmd.pieceId;
+      } else if (cmd.type === 'MAGNET_OFF') {
+        const p = pieces.find(p => p.id === cmd.pieceId);
+        if (p) {
+          p.x = cmd.x;
+          p.y = cmd.y;
+          const nearCol = Math.floor(cmd.x);
+          const nearRow = Math.floor(cmd.y);
+          const distCenter = Math.hypot(cmd.x - (nearCol + 0.5), cmd.y - (nearRow + 0.5));
+          if (distCenter < 0.15) {
+            p.col = nearCol;
+            p.row = nearRow;
+            p.nudged = false;
+          } else {
+            p.nudged = true;
+          }
+        }
+        gantry.magnetOn = false;
+        gantry.carryingPieceId = null;
+      } else if (cmd.type === 'NUDGE_EDGE' || cmd.type === 'MOVE_MAIN' || cmd.type === 'RESTORE_CENTER') {
+        gantry.x = cmd.toX;
+        gantry.y = cmd.toY;
+        const p = pieces.find(p => p.id === cmd.pieceId);
+        if (p) {
+          p.x = cmd.toX;
+          p.y = cmd.toY;
+        }
+      }
+    }
+
+    // ============================================================================
+    // UI & TELEMETRY UPDATES
+    // ============================================================================
+
+    function updateParam(key, val) {
+      const num = parseFloat(val);
+      if (key === 'squareMm') {
+        CONFIG.squareMm = num;
+        document.getElementById('lblSquareMm').textContent = `${num} mm`;
+      } else if (key === 'pieceDiaMm') {
+        CONFIG.pieceDiaMm = num;
+        document.getElementById('lblPieceMm').textContent = `${num} mm`;
+      } else if (key === 'nudgePct') {
+        CONFIG.nudgeRatio = num / 100;
+        document.getElementById('lblNudgeRatio').textContent = `${num}%`;
+      } else if (key === 'simSpeed') {
+        CONFIG.simSpeed = num;
+        document.getElementById('lblSimSpeed').textContent = `${num.toFixed(1)}x`;
+      }
+    }
+
+    function toggleXray(checked) { CONFIG.xray = checked; }
+    function toggleRadii(checked) { CONFIG.showRadii = checked; }
+    function toggleRuleMode(checked) {
+      CONFIG.showMoveGuides = checked;
+      renderMiniBoard();
+    }
+
+    function updateHud(stepDesc) {
+      const magDot = document.getElementById('magnetIndicator');
+      const magTxt = document.getElementById('magnetStatusText');
+      if (gantry.magnetOn) {
+        magDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]';
+        magTxt.textContent = '12V Magnet: ENGAGED (ON)';
+        magTxt.className = 'font-semibold text-rose-400';
+      } else {
+        magDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+        magTxt.textContent = '12V Magnet: OFF';
+        magTxt.className = 'font-semibold text-slate-300';
+      }
+      if (stepDesc) {
+        document.getElementById('hudStepText').textContent = stepDesc;
+      }
+      const xMm = (gantry.x * CONFIG.squareMm).toFixed(1);
+      const yMm = (gantry.y * CONFIG.squareMm).toFixed(1);
+      document.getElementById('hudCoordsText').textContent = `Gantry X: ${xMm} mm | Y: ${yMm} mm`;
+    }
+
+    function renderCommandLog() {
+      const container = document.getElementById('cmdLogContainer');
+      const badge = document.getElementById('cmdCountBadge');
+      badge.textContent = `${commandQueue.length} cmds`;
+
+      if (commandQueue.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 italic">Click any White or Black piece and select a target square to generate collision-free gantry commands...</div>`;
+        return;
+      }
+
+      container.innerHTML = commandQueue.map((c, idx) => {
+        const isCurrent = idx === activeCmdIndex;
+        const isDone = activeCmdIndex > idx || activeCmdIndex === -1;
+        let badgeColor = 'bg-slate-500/20 text-slate-300';
+        if (c.type === 'NUDGE_EDGE') badgeColor = 'bg-amber-500/20 text-amber-300';
+        else if (c.type === 'MOVE_MAIN') badgeColor = 'bg-cyan-500/20 text-cyan-300';
+        else if (c.type === 'RESTORE_CENTER') badgeColor = 'bg-emerald-500/20 text-emerald-300';
+        else if (c.type === 'MAGNET_ON') badgeColor = 'bg-rose-500/20 text-rose-300';
+
+        const rowBg = isCurrent
+          ? 'bg-indigo-500/25 border-indigo-500/60'
+          : (isDone ? 'opacity-55 border-transparent' : 'border-transparent');
+
+        return `
+          <div id="cmd-row-${idx}" class="px-2 py-1 rounded border ${rowBg} flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 truncate">
+              <span class="text-slate-400">${idx + 1}.</span>
+              <span class="px-1.5 py-0.5 rounded text-xs ${badgeColor}">${c.type}</span>
+              <span class="truncate text-slate-200">${c.desc}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (activeCmdIndex >= 0) {
+        const activeRow = document.getElementById(`cmd-row-${activeCmdIndex}`);
+        if (activeRow) activeRow.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    // ============================================================================
+    // INTERACTIVE 3D RENDERER (TRUE 3D PROJECTION + SHADED LATHE GEOMETRY)
+    // ============================================================================
+
+    const canvas = document.getElementById('boardCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const camera = {
+      yaw: 0.0,       // 0.0 = sitting directly behind the White pieces (Rank 1 at bottom, File 'a' on left, 'h' on right)
+      pitch: 0.82,    // 0 = top-down, ~0.82 = comfortable 3D player view behind White
+      distance: 15.2,
+      panX: 4.0,
+      panY: 4.0,
+      panZ: 0.0
+    };
+
+    function setCameraPreset(preset) {
+      if (preset === 'white' || preset === 'perspective') {
+        camera.yaw = 0.0;
+        camera.pitch = 0.82;
+        camera.distance = 15.2;
+        camera.panX = 4.0;
+        camera.panY = 4.0;
+      } else if (preset === 'black') {
+        camera.yaw = Math.PI;
+        camera.pitch = 0.82;
+        camera.distance = 15.2;
+        camera.panX = 4.0;
+        camera.panY = 4.0;
+      } else if (preset === 'top') {
+        camera.yaw = 0.0;
+        camera.pitch = 0.0;
+        camera.distance = 14.8;
+        camera.panX = 4.0;
+        camera.panY = 4.0;
+      } else if (preset === 'under') {
+        camera.yaw = 0.0;
+        camera.pitch = 2.35;
+        camera.distance = 15.0;
+        camera.panX = 4.0;
+        camera.panY = 4.0;
+      } else if (preset === 'side') {
+        camera.yaw = -Math.PI * 0.5;
+        camera.pitch = 1.25;
+        camera.distance = 14.5;
+        camera.panX = 4.0;
+        camera.panY = 4.0;
+      }
+    }
+
+    function project3D(wx, wy, wz) {
+      const w = canvas.width;
+      const h = canvas.height;
+      const fov = Math.min(w, h) * 0.92;
+
+      const dx = wx - camera.panX;
+      const dy = wy - camera.panY;
+      const dz = wz - camera.panZ;
+
+      const cosYaw = Math.cos(camera.yaw);
+      const sinYaw = Math.sin(camera.yaw);
+      const rx = dx * cosYaw - dy * sinYaw;
+      const ry = dx * sinYaw + dy * cosYaw;
+      const rz = dz;
+
+      // Pitch=0 is top-down; Pitch~0.82 is looking from behind White (Rank 1 closest, pieces standing upright +Z -> up on screen)
+      const cosPitch = Math.cos(camera.pitch);
+      const sinPitch = Math.sin(camera.pitch);
+      const cy = ry * cosPitch + rz * sinPitch;
+      const cz = -ry * sinPitch + rz * cosPitch;
+      const cx = rx;
+
+      const depth = camera.distance - cz;
+      const safeDepth = Math.max(0.5, depth);
+      const scale = fov / safeDepth;
+
+      return {
+        x: w * 0.5 + cx * scale,
+        y: h * 0.5 - cy * scale,
+        depth: safeDepth,
+        scale
+      };
+    }
+
+    function screenToBoardPlane(mx, my) {
+      let bestX = 4.0, bestY = 4.0;
+      for (let iter = 0; iter < 10; iter++) {
+        const p0 = project3D(bestX, bestY, 0);
+        const px = project3D(bestX + 0.05, bestY, 0);
+        const py = project3D(bestX, bestY + 0.05, 0);
+
+        const jxx = (px.x - p0.x) / 0.05;
+        const jxy = (py.x - p0.x) / 0.05;
+        const jyx = (px.y - p0.y) / 0.05;
+        const jyy = (py.y - p0.y) / 0.05;
+
+        const det = jxx * jyy - jxy * jyx;
+        if (Math.abs(det) < 1e-5) break;
+
+        const errX = mx - p0.x;
+        const errY = my - p0.y;
+
+        bestX += (errX * jyy - errY * jxy) / det;
+        bestY += (errY * jxx - errX * jyx) / det;
+      }
+      return { wx: bestX, wy: bestY };
+    }
+
+    // Also allow clicking directly on a tall 3D piece's body/badge!
+    function pickPieceOrSquareAtScreen(mx, my) {
+      // First check if user clicked directly on a piece's 3D body / top badge (when no piece is selected, or when clicking a piece)
+      let closestPiece = null;
+      let bestDist = Infinity;
+
+      for (const p of pieces) {
+        const heights = { P: 0.52, R: 0.64, N: 0.68, B: 0.74, Q: 0.86, K: 0.96 };
+        const h = heights[p.type] || 0.6;
+        // Check base, mid, and top badge projections
+        for (const zSample of [0.05, h * 0.5, h + 0.08]) {
+          const proj = project3D(p.x, p.y, zSample);
+          const hitRadius = Math.max(14, proj.scale * 0.28);
+          const d = Math.hypot(mx - proj.x, my - proj.y);
+          if (d < hitRadius && proj.depth < bestDist) {
+            bestDist = proj.depth;
+            closestPiece = p;
+          }
+        }
+      }
+
+      const pt = screenToBoardPlane(mx, my);
+      const planeCol = Math.floor(pt.wx);
+      const planeRow = Math.floor(pt.wy);
+
+      // If no piece is currently selected and the user clicked right on a 3D piece, select that piece's square
+      if (selectedPieceId === null && closestPiece) {
+        return { col: closestPiece.col, row: closestPiece.row };
+      }
+
+      return { col: planeCol, row: planeRow };
+    }
+
+    let isDragging = false;
+    let dragButton = 0;
+    let dragMoved = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let hoveredSquare = null;
+
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    canvas.addEventListener('pointerdown', e => {
+      isDragging = true;
+      dragButton = e.button;
+      dragMoved = false;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      if (isDragging) {
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        if (Math.hypot(dx, dy) > 4) dragMoved = true;
+
+        if (dragButton === 2 || e.shiftKey) {
+          camera.panX -= dx * 0.015;
+          camera.panY += dy * 0.015;
+        } else {
+          camera.yaw += dx * 0.007;
+          camera.pitch = Math.max(0.02, Math.min(2.65, camera.pitch + dy * 0.007));
+        }
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      } else {
+        const picked = pickPieceOrSquareAtScreen(mx, my);
+        if (picked.col >= -2 && picked.col <= 9 && picked.row >= 0 && picked.row <= 7) {
+          hoveredSquare = picked;
+          document.getElementById('hoverSquareBadge').textContent = `Square: ${fileRankLabel(picked.col, picked.row)}`;
+        } else {
+          hoveredSquare = null;
+          document.getElementById('hoverSquareBadge').textContent = `Square: --`;
+        }
+      }
+    });
+
+    canvas.addEventListener('pointerup', e => {
+      if (!dragMoved && e.button === 0) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const picked = pickPieceOrSquareAtScreen(mx, my);
+        selectSquareOrMove(picked.col, picked.row);
+      }
+      isDragging = false;
+    });
+
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      camera.distance = Math.max(7.5, Math.min(26.0, camera.distance + e.deltaY * 0.008));
+    }, { passive: false });
+
+    function drawPoly3D(pts3D, fillStyle, strokeStyle = null, lineWidth = 1) {
+      const projected = pts3D.map(p => project3D(p[0], p[1], p[2]));
+      ctx.beginPath();
+      ctx.moveTo(projected[0].x, projected[0].y);
+      for (let i = 1; i < projected.length; i++) {
+        ctx.lineTo(projected[i].x, projected[i].y);
+      }
+      ctx.closePath();
+      if (fillStyle) {
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+      }
+      if (strokeStyle) {
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      }
+    }
+
+    function drawBox3D(x0, y0, z0, x1, y1, z1, topColor, sideColor, edgeColor) {
+      const faces = [
+        { pts: [[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]], color: topColor },
+        { pts: [[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0]], color: sideColor },
+        { pts: [[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]], color: sideColor },
+        { pts: [[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]], color: sideColor },
+        { pts: [[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]], color: sideColor },
+        { pts: [[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]], color: sideColor }
+      ];
+
+      faces.forEach(f => {
+        const cx = f.pts.reduce((s, p) => s + p[0], 0) / 4;
+        const cy = f.pts.reduce((s, p) => s + p[1], 0) / 4;
+        const cz = f.pts.reduce((s, p) => s + p[2], 0) / 4;
+        f.depth = project3D(cx, cy, cz).depth;
+      });
+
+      faces.sort((a, b) => b.depth - a.depth);
+      for (const f of faces) {
+        drawPoly3D(f.pts, f.color, edgeColor, 0.75);
+      }
+    }
+
+    function drawChessPiece3D(piece) {
+      const wx = piece.x;
+      const wy = piece.y;
+      const isWhite = piece.color === 'W';
+      const isSelected = piece.id === selectedPieceId;
+      const isCarried = piece.id === gantry.carryingPieceId && gantry.magnetOn;
+
+      const baseRadius = (CONFIG.pieceDiaMm / CONFIG.squareMm) * 0.5;
+
+      if (CONFIG.showRadii || isSelected || piece.nudged) {
+        const ringPts = [];
+        const segs = 24;
+        for (let i = 0; i < segs; i++) {
+          const ang = (i / segs) * Math.PI * 2;
+          ringPts.push([wx + Math.cos(ang) * baseRadius, wy + Math.sin(ang) * baseRadius, 0.01]);
+        }
+        let ringStroke = isWhite ? 'rgba(248, 250, 252, 0.35)' : 'rgba(56, 189, 248, 0.35)';
+        let ringFill = null;
+        if (isSelected) {
+          ringStroke = '#38bdf8';
+          ringFill = 'rgba(56, 189, 248, 0.32)';
+        } else if (isCarried) {
+          ringStroke = '#f43f5e';
+          ringFill = 'rgba(244, 63, 94, 0.28)';
+        } else if (piece.nudged) {
+          ringStroke = '#fbbf24';
+          ringFill = 'rgba(251, 191, 36, 0.25)';
+        }
+        drawPoly3D(ringPts, ringFill, ringStroke, isSelected || isCarried ? 2.5 : 1.1);
+      }
+
+      const heights = { P: 0.75, R: 0.9, N: 0.95, B: 1.05, Q: 1.2, K: 1.35 };
+      const totalH = heights[piece.type] || 0.6;
+
+      const H = totalH;
+      const R0 = baseRadius;
+      const base = [{ z: 0, r: R0 * 0.98 }, { z: 0.08, r: R0 * 0.95 }, { z: 0.14, r: R0 * 0.7 }];
+      const profiles = {
+        P: [...base, { z: H * 0.32, r: R0 * 0.4 }, { z: H * 0.5, r: R0 * 0.34 }, { z: H * 0.6, r: R0 * 0.55 }, { z: H * 0.68, r: R0 * 0.5 }, { z: H * 0.8, r: R0 * 0.6 }, { z: H * 0.94, r: R0 * 0.5 }, { z: H, r: R0 * 0.2 }],
+        R: [...base, { z: H * 0.25, r: R0 * 0.62 }, { z: H * 0.65, r: R0 * 0.56 }, { z: H * 0.7, r: R0 * 0.8 }, { z: H * 0.8, r: R0 * 0.86 }, { z: H * 0.82, r: R0 * 0.7 }, { z: H, r: R0 * 0.7 }],
+        N: [...base, { z: H * 0.2, r: R0 * 0.8 }, { z: H * 0.28, r: R0 * 0.62 }],
+        B: [...base, { z: H * 0.28, r: R0 * 0.5 }, { z: H * 0.45, r: R0 * 0.4 }, { z: H * 0.55, r: R0 * 0.62 }, { z: H * 0.7, r: R0 * 0.55 }, { z: H * 0.86, r: R0 * 0.3 }, { z: H * 0.9, r: R0 * 0.4 }, { z: H * 0.97, r: R0 * 0.22 }, { z: H, r: R0 * 0.05 }],
+        Q: [...base, { z: H * 0.3, r: R0 * 0.5 }, { z: H * 0.55, r: R0 * 0.42 }, { z: H * 0.62, r: R0 * 0.65 }, { z: H * 0.74, r: R0 * 0.6 }, { z: H * 0.84, r: R0 * 0.92 }, { z: H * 0.92, r: R0 * 0.62 }, { z: H, r: R0 * 0.3 }],
+        K: [...base, { z: H * 0.3, r: R0 * 0.52 }, { z: H * 0.55, r: R0 * 0.44 }, { z: H * 0.62, r: R0 * 0.68 }, { z: H * 0.74, r: R0 * 0.6 }, { z: H * 0.82, r: R0 * 0.82 }, { z: H * 0.88, r: R0 * 0.6 }]
+      };
+      const profile = profiles[piece.type] || profiles.P;
+
+      const bodyColor = isWhite ? '#f1f5f9' : '#1e293b';
+      const shadeColor = isWhite ? '#cbd5e1' : '#0f172a';
+      const rimColor = isSelected ? '#38bdf8' : (isCarried ? '#f43f5e' : (isWhite ? '#64748b' : '#475569'));
+
+      const sides = 14;
+      for (let s = 0; s < profile.length - 1; s++) {
+        const p0 = profile[s];
+        const p1 = profile[s + 1];
+        const quads = [];
+        for (let i = 0; i < sides; i++) {
+          const a0 = (i / sides) * Math.PI * 2;
+          const a1 = ((i + 1) / sides) * Math.PI * 2;
+          const pts = [
+            [wx + Math.cos(a0) * p0.r, wy + Math.sin(a0) * p0.r, p0.z],
+            [wx + Math.cos(a1) * p0.r, wy + Math.sin(a1) * p0.r, p0.z],
+            [wx + Math.cos(a1) * p1.r, wy + Math.sin(a1) * p1.r, p1.z],
+            [wx + Math.cos(a0) * p1.r, wy + Math.sin(a0) * p1.r, p1.z]
+          ];
+          const midA = (a0 + a1) * 0.5;
+          const light = Math.cos(midA - camera.yaw + 0.6);
+          const cx = (pts[0][0] + pts[2][0]) * 0.5;
+          const cy = (pts[0][1] + pts[2][1]) * 0.5;
+          const cz = (p0.z + p1.z) * 0.5;
+          quads.push({
+            pts,
+            depth: project3D(cx, cy, cz).depth,
+            fill: light > 0 ? bodyColor : shadeColor
+          });
+        }
+        quads.sort((a, b) => b.depth - a.depth);
+        for (const q of quads) {
+          drawPoly3D(q.pts, q.fill, rimColor, 0.45);
+        }
+      }
+
+      const lastP = profile[profile.length - 1];
+      if (lastP.r > 0.01) {
+        const capPts = [];
+        for (let i = 0; i < sides; i++) {
+          const a = (i / sides) * Math.PI * 2;
+          capPts.push([wx + Math.cos(a) * lastP.r, wy + Math.sin(a) * lastP.r, lastP.z]);
+        }
+        drawPoly3D(capPts, bodyColor, rimColor, 0.45);
+      }
+      const top = isWhite ? '#f8fafc' : '#334155';
+      const sideC = isWhite ? '#cbd5e1' : '#0f172a';
+      if (piece.type === 'K') {
+        const w = R0 * 0.13;
+        drawBox3D(wx - w, wy - w, H * 0.88, wx + w, wy + w, H + 0.2, top, sideC, rimColor);
+        drawBox3D(wx - R0 * 0.42, wy - w, H + 0.05, wx + R0 * 0.42, wy + w, H + 0.11, top, sideC, rimColor);
+      } else if (piece.type === 'Q') {
+        const w = R0 * 0.2;
+        drawBox3D(wx - w, wy - w, H - 0.02, wx + w, wy + w, H + 0.1, top, sideC, rimColor);
+      } else if (piece.type === 'N') {
+        const d = isWhite ? 1 : -1;
+        const bx = (y0, y1, z0, z1, hw) => {
+          const ya = wy + Math.min(y0, y1) * R0 * d;
+          const yb = wy + Math.max(y0, y1) * R0 * d;
+          drawBox3D(wx - hw * R0, Math.min(ya, yb), z0, wx + hw * R0, Math.max(ya, yb), z1, top, sideC, rimColor);
+        };
+        bx(-0.45, 0.35, H * 0.26, H * 0.58, 0.34);
+        bx(-0.55, 0.15, H * 0.58, H * 0.9, 0.3);
+        bx(-0.3, 0.7, H * 0.78, H * 0.98, 0.3);
+        bx(0.5, 0.95, H * 0.7, H * 0.86, 0.24);
+        bx(-0.3, -0.1, H * 0.98, H * 1.1, 0.1);
+        bx(-0.6, -0.4, H * 0.62, H * 0.98, 0.1);
+      }
+
+    }
+
+    function drawUnderBoardGantry3D() {
+      const zRail = -0.32;
+      const zCarriage = -0.18;
+
+      drawBox3D(-2.25, -1.2, zRail - 0.06, -2.12, 9.2, zRail + 0.06, '#475569', '#334155', '#64748b');
+      drawBox3D(10.12, -1.2, zRail - 0.06, 10.25, 9.2, zRail + 0.06, '#475569', '#334155', '#64748b');
+
+      const gy = gantry.y;
+      drawBox3D(-2.2, gy - 0.12, zRail - 0.03, 10.2, gy + 0.12, zRail + 0.05, '#94a3b8', '#475569', '#cbd5e1');
+
+      const gx = gantry.x;
+      drawBox3D(gx - 0.34, gy - 0.34, zCarriage - 0.14, gx + 0.34, gy + 0.34, zCarriage + 0.08, '#f59e0b', '#b45309', '#fde68a');
+
+      const magColor = gantry.magnetOn ? '#f43f5e' : '#64748b';
+      const magRingpts = [];
+      for (let i = 0; i < 20; i++) {
+        const a = (i / 20) * Math.PI * 2;
+        magRingpts.push([gx + Math.cos(a) * 0.22, gy + Math.sin(a) * 0.22, -0.04]);
+      }
+      drawPoly3D(magRingpts, magColor, '#f8fafc', 1.5);
+
+      if (gantry.magnetOn) {
+        const glowPts = [];
+        for (let i = 0; i < 24; i++) {
+          const a = (i / 24) * Math.PI * 2;
+          glowPts.push([gx + Math.cos(a) * 0.42, gy + Math.sin(a) * 0.42, 0.005]);
+        }
+        drawPoly3D(glowPts, 'rgba(244, 63, 94, 0.28)', '#fb7185', 2.0);
+      }
+    }
+
+    const SLOT_HALF_PROFILES = {
+      P: [[.4,0],[.4,.08],[.28,.14],[.13,.4],[.13,.5],[.24,.56],[.13,.62],[.2,.75],[.16,.9],[.08,.98],[0,1]],
+      R: [[.4,0],[.4,.08],[.28,.14],[.2,.3],[.2,.7],[.32,.76],[.32,1],[.2,1],[.2,.9],[.1,.9],[.1,1],[0,1]],
+      B: [[.4,0],[.4,.08],[.28,.14],[.12,.4],[.2,.5],[.2,.6],[.12,.72],[.15,.82],[.07,.95],[0,1]],
+      Q: [[.4,0],[.4,.08],[.28,.14],[.14,.4],[.14,.55],[.22,.62],[.22,.7],[.46,.9],[.3,.84],[.3,.96],[.16,.84],[.1,1],[0,.9]]
+    };
+    const SLOT_KNIGHT = [[-.4,0],[.4,0],[.4,.08],[.28,.14],[.3,.4],[.25,.65],[.3,.85],[.22,.98],[.12,.9],[.05,1],[0,.9],[-.15,.85],[-.42,.62],[-.38,.55],[-.3,.58],[-.12,.5],[-.2,.35],[-.28,.14],[-.4,.08]];
+
+    function drawSlotDiagram3D(cx, cy, type, color, hovered) {
+      const size = 0.55;
+      const half = SLOT_HALF_PROFILES[type];
+      const outline = type === 'N'
+        ? SLOT_KNIGHT
+        : half.map(p => [-p[0], p[1]]).concat(half.slice().reverse().map(p => [p[0], p[1]]));
+      const pts = outline.map(p => [cx + p[0] * size, cy - size * 0.5 + p[1] * size, 0.01]);
+      const isWhite = color === 'W';
+      drawPoly3D(
+        pts,
+        hovered ? 'rgba(56,189,248,0.7)' : (isWhite ? 'rgba(241,245,249,0.55)' : 'rgba(30,41,59,0.75)'),
+        isWhite ? 'rgba(226,232,240,0.8)' : 'rgba(148,163,184,0.8)',
+        1.2
+      );
+      if (type === 'N') {
+        drawPoly3D([[cx - 0.2 * size, cy - size * 0.5 + 0.72 * size, 0.012], [cx - 0.14 * size, cy - size * 0.5 + 0.72 * size, 0.012], [cx - 0.14 * size, cy - size * 0.5 + 0.78 * size, 0.012], [cx - 0.2 * size, cy - size * 0.5 + 0.78 * size, 0.012]], isWhite ? '#334155' : '#e2e8f0', null, 0.5);
+      }
+    }
+
+    function drawBoardAndGraveyard3D() {
+      const alpha = CONFIG.xray ? 0.76 : 0.98;
+
+      drawBox3D(-2.4, -1.4, -0.45, 10.4, 9.4, -0.02, 'rgba(69, 39, 19, 0.45)', 'rgba(45, 24, 12, 0.65)', 'rgba(120, 72, 35, 0.6)');
+
+      // Front and back transit lanes (rows -1 and 8) used to carry pieces around the board
+      for (const laneRow of [-1, 8]) {
+        drawPoly3D(
+          [[-2, laneRow, 0], [10, laneRow, 0], [10, laneRow + 1, 0], [-2, laneRow + 1, 0]],
+          `rgba(14, 116, 144, ${CONFIG.xray ? 0.22 : 0.4})`,
+          'rgba(34, 211, 238, 0.45)',
+          1
+        );
+      }
+
+      const graveCols = [-2, -1, 8, 9];
+      for (const c of graveCols) {
+        const isLeft = c < 4;
+        for (let r = 0; r < 8; r++) {
+          const isHovered = hoveredSquare && hoveredSquare.col === c && hoveredSquare.row === r;
+          drawSlotDiagram3D(c + 0.5, r + 0.5, slotType(c, r), isLeft ? 'W' : 'B', isHovered);
+        }
+      }
+
+      const selPiece = pieces.find(p => p.id === selectedPieceId);
+
+      for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < 8; r++) {
+          const isLight = (c + r) % 2 === 1;
+          const isHovered = hoveredSquare && hoveredSquare.col === c && hoveredSquare.row === r;
+          const isSelectedSq = selPiece && selPiece.col === c && selPiece.row === r;
+          const guide = CONFIG.showMoveGuides ? suggestedMoves.find(m => m.col === c && m.row === r) : null;
+
+          let fill = isLight
+            ? `rgba(226, 204, 172, ${alpha})`
+            : `rgba(122, 82, 52, ${alpha})`;
+
+          if (isSelectedSq) {
+            fill = 'rgba(14, 165, 233, 0.65)';
+          } else if (isHovered) {
+            fill = 'rgba(56, 189, 248, 0.55)';
+          } else if (guide) {
+            fill = guide.isCapture ? 'rgba(244, 63, 94, 0.48)' : 'rgba(34, 197, 94, 0.42)';
+          }
+
+          drawPoly3D(
+            [[c, r, 0], [c + 1, r, 0], [c + 1, r + 1, 0], [c, r + 1, 0]],
+            fill,
+            guide ? 'rgba(74, 222, 128, 0.8)' : 'rgba(15, 23, 42, 0.35)',
+            guide ? 1.5 : 0.8
+          );
+
+          // Square corner RGB LED indicator (matches Figure 1 of Design Draft: green for valid moves, white for source)
+          const ledPt = project3D(c + 0.14, r + 0.14, 0.005);
+          ctx.beginPath();
+          ctx.arc(ledPt.x, ledPt.y, Math.max(2, ledPt.scale * (guide || isSelectedSq ? 0.05 : 0.03)), 0, Math.PI * 2);
+          ctx.fillStyle = isSelectedSq ? '#ffffff' : (guide ? '#4ade80' : (isHovered ? '#38bdf8' : 'rgba(251, 146, 60, 0.45)'));
+          ctx.fill();
+        }
+      }
+
+      ctx.save();
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let c = 0; c < 8; c++) {
+        const p = project3D(c + 0.5, -0.12, 0);
+        ctx.fillText(String.fromCharCode(97 + c), p.x, p.y);
+      }
+      for (let r = 0; r < 8; r++) {
+        const p = project3D(-0.22, r + 0.5, 0);
+        ctx.fillText(String(r + 1), p.x, p.y);
+      }
+
+      const headers = [
+        { x: -1.5, y: 9.5, text: 'PAWNS' },
+        { x: -0.5, y: 9.5, text: 'HEAVY' },
+        { x: 8.5, y: 9.5, text: 'HEAVY' },
+        { x: 9.5, y: 9.5, text: 'PAWNS' },
+        { x: 4.0, y: 8.5, text: 'BACK LANE' },
+        { x: 4.0, y: -0.5, text: 'FRONT LANE' }
+      ];
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      for (const h of headers) {
+        const p = project3D(h.x, h.y, 0.02);
+        ctx.fillText(h.text, p.x, p.y);
+      }
+      ctx.restore();
+    }
+
+    function drawPlannedSegments3D() {
+      for (const s of plannedSegments) {
+        const pA = project3D(s.ax, s.ay, 0.025);
+        const pB = project3D(s.bx, s.by, 0.025);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(pA.x, pA.y);
+        ctx.lineTo(pB.x, pB.y);
+
+        if (s.kind === 'nudge') {
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([4, 3]);
+        } else if (s.kind === 'restore') {
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([3, 3]);
+        } else {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+          ctx.lineWidth = Math.max(8, pA.scale * (CONFIG.pieceDiaMm / CONFIG.squareMm));
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(pA.x, pA.y);
+          ctx.lineTo(pB.x, pB.y);
+          ctx.strokeStyle = '#22d3ee';
+          ctx.lineWidth = 3.2;
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // ============================================================================
+    // MAIN ANIMATION LOOP
+    // ============================================================================
+
+    let lastFrameTime = performance.now();
+
+    function animate(now) {
+      const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+      lastFrameTime = now;
+
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const targetW = Math.round(rect.width * dpr);
+      const targetH = Math.round(rect.height * dpr);
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+
+      if (!CONFIG.paused && activeCmdIndex >= 0 && activeCmdIndex < commandQueue.length) {
+        const cmd = commandQueue[activeCmdIndex];
+        if (cmd.type === 'MAGNET_ON' || cmd.type === 'MAGNET_OFF') {
+          activeCmdProgress += dt * 3.5 * CONFIG.simSpeed;
+          if (activeCmdProgress >= 1.0) {
+            applyCommandEndState(cmd);
+            updateHud(cmd.desc);
+            activeCmdIndex++;
+            activeCmdProgress = 0;
+            renderCommandLog();
+            renderMiniBoard();
+          }
+        } else {
+          const dist = Math.hypot(cmd.toX - cmd.fromX, cmd.toY - cmd.fromY);
+          const baseSpeed = cmd.type === 'TRAVEL' ? 4.2 : 2.4;
+          const stepRate = (baseSpeed * CONFIG.simSpeed) / Math.max(0.15, dist);
+          activeCmdProgress += dt * stepRate;
+
+          if (activeCmdProgress >= 1.0) {
+            applyCommandEndState(cmd);
+            updateHud(cmd.desc);
+            activeCmdIndex++;
+            activeCmdProgress = 0;
+            renderCommandLog();
+            renderMiniBoard();
+          } else {
+            const t = activeCmdProgress < 0.5
+              ? 2 * activeCmdProgress * activeCmdProgress
+              : 1 - Math.pow(-2 * activeCmdProgress + 2, 2) / 2;
+            const curX = cmd.fromX + (cmd.toX - cmd.fromX) * t;
+            const curY = cmd.fromY + (cmd.toY - cmd.fromY) * t;
+            gantry.x = curX;
+            gantry.y = curY;
+            if (cmd.pieceId) {
+              const p = pieces.find(piece => piece.id === cmd.pieceId);
+              if (p) {
+                p.x = curX;
+                p.y = curY;
+              }
+            }
+            updateHud(cmd.desc);
+          }
+        }
+        if (activeCmdIndex >= commandQueue.length) {
+          activeCmdIndex = -1;
+          updateHud('Move sequence complete — Click any White or Black piece for next move');
+          renderCommandLog();
+          renderMiniBoard();
+        }
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const lookingFromUnderneath = camera.pitch > Math.PI * 0.5;
+
+      if (!lookingFromUnderneath) {
+        drawUnderBoardGantry3D();
+        drawBoardAndGraveyard3D();
+        drawPlannedSegments3D();
+      } else {
+        drawBoardAndGraveyard3D();
+        drawPlannedSegments3D();
+      }
+
+      const sortedPieces = [...pieces].sort((a, b) => {
+        const da = project3D(a.x, a.y, 0.3).depth;
+        const db = project3D(b.x, b.y, 0.3).depth;
+        return db - da;
+      });
+
+      for (const p of sortedPieces) {
+        drawChessPiece3D(p);
+      }
+
+      if (lookingFromUnderneath) {
+        drawUnderBoardGantry3D();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    resetBoardStandard();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
