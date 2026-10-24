@@ -1,0 +1,32 @@
+{
+  "name": "project64",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@react-native-community/slider": "5.2.1",
+    "chess.js": "^1.4.0",
+    "expo": "~58.0.19",
+    "expo-blur": "~58.0.5",
+    "expo-build-properties": "~58.0.11",
+    "expo-status-bar": "~58.0.4",
+    "lucide-react-native": "^1.61.0",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-ble-plx": "^3.5.1",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-svg": "15.16.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "test": "node --experimental-strip-types --no-warnings scripts/selfcheck.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "private": true
+}
