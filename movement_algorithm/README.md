@@ -47,13 +47,13 @@ Stop the server with `Ctrl+C`. If port 8000 is busy, use another port (for examp
 
 ### Using the Simulator
 
-- **Scenario buttons**: run preset demos (knight nudge, bishop diagonal, capture to graveyard, promotion, castling), or reset to the standard starting position.
-- **Click to move**: click a piece of the side to move, then one of the highlighted squares. Only legal chess moves are accepted (check, pins, castling rules, en passant and promotion are all enforced). Turns alternate starting with White, and the badge shows check, checkmate or stalemate. Use **Reset Full Board** to start over.
+- **Scenario buttons**: run preset demos (knight nudge, bishop diagonal, capture to graveyard, promotion, castling), or reset to the standard starting position. **Reset Board (Magnet)** plans and animates a full reset in which the gantry and electromagnet move every piece (including captured and promoted ones) back to its starting square; **Instant Reset** just snaps the board back.
+- **Click to move**: click a piece of the side to move, then one of the highlighted squares. Only legal chess moves are accepted (check, pins, castling rules, en passant and promotion are all enforced). Turns alternate starting with White, and the badge shows check, checkmate or stalemate. Use **Instant Reset** or **Reset Board (Magnet)** to start over.
 - **Algebraic input**: type a move such as `g1f3`, `e2e4` or `c1g5` and press Enter. Pick the promotion piece from the dropdown.
 - **Camera presets**: White POV, Black POV, Top-Down, Under-Board Gantry and Side Profile. Drag to orbit the view.
 - **Overlays**: toggle the legal-move highlights (illegal moves are rejected either way), X-ray view, and piece clearance radii.
 - **Playback**: pause, or skip the current animation. The simulation speed is adjustable.
-- **Dimensions & nudge parameters**: adjust square size, piece diameter, nudge ratio and speed live.
+- **Dimensions & nudge parameters**: adjust square size (default 60 mm), edge nudge margin and speed live. Piece base diameters are fixed per type (pawn 28, knight/bishop/rook 34, queen/king 36 mm); a nudged piece moves to the very edge of its own square, so it can never touch a neighbouring piece.
 - **HUD and queue**: shows magnet state, gantry X/Y in mm, and the full "Gantry Execution Queue" produced by the planner.
 
 ## How the Planner Works

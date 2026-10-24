@@ -67,7 +67,10 @@
           5. Castling (King Nudge)
         </button>
         <button onclick="resetBoardStandard()" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-          Reset Full Board
+          Instant Reset
+        </button>
+        <button onclick="resetBoardWithMagnet()" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition">
+          Reset Board (Magnet)
         </button>
       </div>
     </div>
@@ -184,25 +187,25 @@
             <div class="flex flex-col gap-1">
               <div class="flex justify-between">
                 <span class="text-slate-400">Square Size</span>
-                <span id="lblSquareMm" class="font-mono font-semibold text-slate-200">50 mm</span>
+                <span id="lblSquareMm" class="font-mono font-semibold text-slate-200">60 mm</span>
               </div>
-              <input type="range" min="35" max="65" step="1" value="50" oninput="updateParam('squareMm', this.value)" />
+              <input type="range" min="50" max="80" step="1" value="60" oninput="updateParam('squareMm', this.value)" />
             </div>
 
             <div class="flex flex-col gap-1">
               <div class="flex justify-between">
                 <span class="text-slate-400">Piece Base &Oslash;</span>
-                <span id="lblPieceMm" class="font-mono font-semibold text-slate-200">26 mm</span>
+                <span class="font-mono font-semibold text-slate-200">P28 N/B/R34 Q/K36</span>
               </div>
-              <input type="range" min="16" max="38" step="1" value="26" oninput="updateParam('pieceDiaMm', this.value)" />
+              <div class="text-slate-500">Fixed per piece type (mm)</div>
             </div>
 
             <div class="flex flex-col gap-1">
               <div class="flex justify-between">
-                <span class="text-slate-400">Edge Nudge Offset</span>
-                <span id="lblNudgeRatio" class="font-mono font-semibold text-slate-200">34%</span>
+                <span class="text-slate-400">Edge Nudge Margin</span>
+                <span id="lblEdgeMargin" class="font-mono font-semibold text-slate-200">1 mm</span>
               </div>
-              <input type="range" min="20" max="42" step="1" value="34" oninput="updateParam('nudgePct', this.value)" />
+              <input type="range" min="0" max="4" step="0.5" value="1" oninput="updateParam('edgeMarginMm', this.value)" />
             </div>
 
             <div class="flex flex-col gap-1">
@@ -235,10 +238,9 @@
     // ============================================================================
 
     const CONFIG = {
-      squareMm: 50,
-      pieceDiaMm: 26,
-      safetyMarginMm: 3,
-      nudgeRatio: 0.34, // fraction of square width to push blocking piece toward square edge/corner
+      squareMm: 60,
+      safetyMarginMm: 3,  // minimum air gap kept between the moving piece and any nudged piece
+      edgeMarginMm: 1,    // a nudged piece stops this far short of its square's edge
       simSpeed: 1.2,
       xray: true,
       showRadii: true,
@@ -335,6 +337,161 @@
       renderCommandLog();
       renderMiniBoard();
       updateHud('Standard board ready — White to move');
+    }
+
+    // ============================================================================
+    // MAGNET RESET: moves every piece back to its starting square using the gantry
+    // ============================================================================
+
+    function standardLayout() {
+      const backRank = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'];
+      const t = [];
+      for (let c = 0; c < 8; c++) {
+        t.push({ color: 'W', type: backRank[c], col: c, row: 0 }, { color: 'W', type: 'P', col: c, row: 1 });
+        t.push({ color: 'B', type: 'P', col: c, row: 6 }, { color: 'B', type: backRank[c], col: c, row: 7 });
+      }
+      t.push({ color: 'W', type: 'Q', col: -1, row: 7 }, { color: 'B', type: 'Q', col: 8, row: 0 });
+      return t;
+    }
+
+    function resetBoardWithMagnet() {
+      finishCurrentQueueInstantly();
+
+      const vPieces = pieces.map(p => ({ ...p, ...squareCenter(p.col, p.row) }));
+      const targets = standardLayout();
+      const sqKey = (c, r) => `${c},${r}`;
+      const targetKeys = new Set(targets.map(t => sqKey(t.col, t.row)));
+      const isParked = p => (p.col < 0 || p.col > 7) && !targetKeys.has(sqKey(p.col, p.row));
+      const assigned = new Map(); // piece id -> {col, row}
+
+      // Interchangeable pieces (same colour and type): keep the ones already home, then match the rest by distance
+      for (const color of ['W', 'B']) {
+        for (const type of ['P', 'N', 'B', 'R', 'Q', 'K']) {
+          const ps = vPieces.filter(p => p.color === color && p.type === type);
+          let ts = targets.filter(t => t.color === color && t.type === type);
+          ts = ts.filter(t => {
+            const home = ps.find(p => p.col === t.col && p.row === t.row);
+            if (home) assigned.set(home.id, t);
+            return !home;
+          });
+          const loose = ps.filter(p => !assigned.has(p.id));
+          const pairs = [];
+          for (const p of loose) {
+            for (const t of ts) pairs.push({ p, t, d: Math.hypot(p.col - t.col, p.row - t.row) + (isParked(p) ? 100 : 0) });
+          }
+          pairs.sort((a, b) => a.d - b.d);
+          for (const { p, t } of pairs) {
+            if (assigned.has(p.id) || [...assigned.values()].includes(t)) continue;
+            assigned.set(p.id, t);
+          }
+        }
+      }
+
+      // Extra pieces (from promotions) stay in, or go to, a graveyard slot that is not part of the starting layout
+      const claimed = new Set([...assigned.values()].map(t => sqKey(t.col, t.row)));
+      for (const p of vPieces) {
+        if (assigned.has(p.id)) continue;
+        if (isParked(p)) {
+          assigned.set(p.id, { col: p.col, row: p.row });
+          claimed.add(sqKey(p.col, p.row));
+          continue;
+        }
+        const cols = p.color === 'W' ? [-1, -2] : [8, 9];
+        const spot = [...cols.flatMap(c => [0, 1, 2, 3, 4, 5, 6, 7].map(r => ({ col: c, row: r })))]
+          .filter(s => !claimed.has(sqKey(s.col, s.row)) && !targetKeys.has(sqKey(s.col, s.row)) &&
+            !vPieces.some(o => o.col === s.col && o.row === s.row))
+          .sort((a, b) => (slotType(b.col, b.row) === p.type) - (slotType(a.col, a.row) === p.type))[0];
+        if (spot) {
+          assigned.set(p.id, spot);
+          claimed.add(sqKey(spot.col, spot.row));
+        }
+      }
+
+      const cmds = [];
+      const segs = [];
+      const simGantry = { x: gantry.x, y: gantry.y };
+
+      const tryMove = (p, col, row, tag) => {
+        const dest = squareCenter(col, row);
+        const route = planRoute(vPieces, p, dest.x, dest.y, p.type !== 'N');
+        if (!isFinite(route.cost)) return false;
+        planStraightSegmentWithEdgeNudging(
+          vPieces, p, dest.x, dest.y, cmds, segs, simGantry,
+          `${tag} ${p.color}${p.type}: ${fileRankLabel(p.col, p.row)} -> ${fileRankLabel(col, row)}`,
+          route.waypoints
+        );
+        p.col = col;
+        p.row = row;
+        return true;
+      };
+
+      const distToTarget = p => {
+        const t = assigned.get(p.id);
+        return Math.hypot(p.col - t.col, p.row - t.row);
+      };
+      let pending = vPieces.filter(p => assigned.has(p.id) && distToTarget(p) > 0);
+
+      for (let guard = 0; pending.length && guard < 600; guard++) {
+        pending.sort((a, b) => distToTarget(a) - distToTarget(b));
+        let progressed = false;
+
+        // Place any piece whose home square is currently empty
+        for (const p of pending) {
+          const t = assigned.get(p.id);
+          if (vPieces.some(o => o.id !== p.id && o.col === t.col && o.row === t.row)) continue;
+          if (tryMove(p, t.col, t.row, 'Reset')) {
+            pending = pending.filter(q => q !== p);
+            progressed = true;
+            break;
+          }
+        }
+        if (progressed) continue;
+
+        // Everything left is waiting on an occupied square: park one occupant on a spare square to break the cycle
+        const occupants = pending.filter(p => pending.some(q => q !== p && assigned.get(q.id).col === p.col && assigned.get(q.id).row === p.row));
+        for (const p of occupants) {
+          const spares = [];
+          for (let c = -2; c <= 9; c++) {
+            for (let r = 0; r < 8; r++) {
+              if (claimed.has(sqKey(c, r)) || targetKeys.has(sqKey(c, r))) continue;
+              if (vPieces.some(o => o.col === c && o.row === r)) continue;
+              spares.push({ col: c, row: r, d: Math.hypot(c - p.col, r - p.row) });
+            }
+          }
+          spares.sort((a, b) => a.d - b.d);
+          if (spares.slice(0, 8).some(s => tryMove(p, s.col, s.row, 'Reset (park)'))) {
+            progressed = true;
+            break;
+          }
+        }
+        if (!progressed) break;
+      }
+
+      sideToMove = 'W';
+      lastMove = null;
+      gameStatus = '';
+      gameOver = false;
+      selectedPieceId = null;
+      suggestedMoves = [];
+      for (const p of pieces) {
+        p.hasMoved = false;
+        const t = assigned.get(p.id);
+        p.isReserve = !!t && (t.col < 0 || t.col > 7);
+      }
+      updateTurnBadge();
+
+      commandQueue = cmds;
+      plannedSegments = segs;
+      activeCmdIndex = cmds.length ? 0 : -1;
+      activeCmdProgress = 0;
+      CONFIG.paused = false;
+      document.getElementById('pauseBtn').textContent = 'Pause';
+      renderCommandLog();
+      renderMiniBoard();
+      const stuck = pending.length;
+      updateHud(!cmds.length ? 'Board already in starting position'
+        : stuck ? `Resetting board — WARNING: ${stuck} piece(s) could not be routed`
+        : 'Resetting board with the electromagnet…');
     }
 
     // ============================================================================
@@ -581,18 +738,76 @@
       return [{ col: primaryCol, row: 0 }];
     }
 
-    // Distance from a piece center below which nudging cannot clear it: a nudge only moves a piece
-    // `nudgeRatio` away, so anything closer than (clearance - nudgeRatio) to the path is a hard blocker.
-    function clearanceRadii() {
-      const trigger = Math.max((CONFIG.pieceDiaMm + CONFIG.safetyMarginMm) / CONFIG.squareMm, 0.56);
-      const hard = Math.max(trigger - CONFIG.nudgeRatio, 0.05) + 0.03;
-      return { trigger, hard };
+    // Physical base diameters (mm) per piece type; the board squares are CONFIG.squareMm wide.
+    const PIECE_DIA_MM = { P: 28, N: 34, B: 34, R: 34, Q: 36, K: 36 };
+    function pieceRadiusSq(p) { return PIECE_DIA_MM[p.type] / 2 / CONFIG.squareMm; }
+
+    // Minimum centre-to-centre distance (square units) the moving piece must keep from a nudged piece.
+    function requiredGap(a, b) {
+      return pieceRadiusSq(a) + pieceRadiusSq(b) + CONFIG.safetyMarginMm / CONFIG.squareMm;
     }
 
-    function isStraightPathClear(vPieces, piece, destX, destY) {
-      const { hard } = clearanceRadii();
-      return !vPieces.some(o => o.id !== piece.id &&
-        pointToSegmentDist(o.x, o.y, piece.x, piece.y, destX, destY).dist < hard);
+    // The 8 spots where a piece's base touches its own square's edge/corner (minus a small margin).
+    // A nudged piece never leaves its own square, so nudged pieces can never collide with each other.
+    function nudgeCandidates(o) {
+      const home = squareCenter(o.col, o.row);
+      const e = Math.max(0, 0.5 - pieceRadiusSq(o) - CONFIG.edgeMarginMm / CONFIG.squareMm);
+      const out = [];
+      for (const dx of [-1, 0, 1]) {
+        for (const dy of [-1, 0, 1]) {
+          if (dx || dy) out.push({ x: home.x + dx * e, y: home.y + dy * e });
+        }
+      }
+      return out;
+    }
+
+    function minLegDist(x, y, legs) {
+      let m = Infinity;
+      for (const l of legs) m = Math.min(m, pointToSegmentDist(x, y, l.ax, l.ay, l.bx, l.by).dist);
+      return m;
+    }
+
+    // null: piece can stay put; {x, y}: edge spot that clears every leg; undefined: no spot clears the path.
+    function resolveBlocker(o, mover, legs) {
+      const need = requiredGap(o, mover);
+      const home = squareCenter(o.col, o.row);
+      if (minLegDist(home.x, home.y, legs) >= need - 1e-9) return null;
+      let best;
+      let bestSlack = -Infinity;
+      for (const c of nudgeCandidates(o)) {
+        const slack = minLegDist(c.x, c.y, legs) - need;
+        if (slack >= -1e-9 && slack > bestSlack + 1e-9) { best = c; bestSlack = slack; }
+      }
+      return best;
+    }
+
+    function pathToLegs(path) {
+      const legs = [];
+      for (let i = 0; i < path.length - 1; i++) {
+        if (Math.hypot(path[i + 1].x - path[i].x, path[i + 1].y - path[i].y) < 1e-4) continue;
+        legs.push({ ax: path[i].x, ay: path[i].y, bx: path[i + 1].x, by: path[i + 1].y });
+      }
+      return legs;
+    }
+
+    // Chooses one edge spot per blocking piece that is valid for the whole multi-leg path.
+    function assignNudges(vPieces, mover, path) {
+      const legs = pathToLegs(path);
+      const nudges = [];
+      const failed = [];
+      for (const o of vPieces) {
+        if (o.id === mover.id) continue;
+        const r = resolveBlocker(o, mover, legs);
+        if (r === null) continue;
+        if (r === undefined) { failed.push(o.id); continue; }
+        let leg = 0, t = 0, bestD = Infinity;
+        legs.forEach((l, i) => {
+          const d = pointToSegmentDist(o.x, o.y, l.ax, l.ay, l.bx, l.by);
+          if (d.dist < bestD) { bestD = d.dist; leg = i; t = d.t; }
+        });
+        nudges.push({ piece: o, leg, t, x: r.x, y: r.y });
+      }
+      return { nudges, failed };
     }
 
     /**
@@ -602,8 +817,7 @@
      *     nudges both sideways); 45-degree steps carry a heavy penalty, so they are used only when necessary
      * Returns {cost, waypoints} with the interior turning points, or waypoints = null if no route exists.
      */
-    function findRoute(vPieces, piece, destX, destY) {
-      const { trigger, hard } = clearanceRadii();
+    function findRoute(vPieces, piece, destX, destY, rigid = new Set()) {
       const others = vPieces.filter(p => p.id !== piece.id);
       const MIN_X = -4, MAX_X = 20, MIN_Y = -2, MAX_Y = 18, W = MAX_X - MIN_X + 1, H = MAX_Y - MIN_Y + 1;
       const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
@@ -616,11 +830,13 @@
         const key = nodeId(ix, iy) * 8 + d;
         if (edgeCache.has(key)) return edgeCache.get(key);
         const ax = ix / 2, ay = iy / 2, bx = (ix + DIRS[d][0]) / 2, by = (iy + DIRS[d][1]) / 2;
+        const legs = [{ ax, ay, bx, by }];
         let n = 0;
         for (const o of others) {
-          const { dist } = pointToSegmentDist(o.x, o.y, ax, ay, bx, by);
-          if (dist < hard) { n = -1; break; }
-          if (dist < trigger) n++;
+          const r = resolveBlocker(o, piece, legs);
+          if (r === null) continue;
+          if (r === undefined || rigid.has(o.id)) { n = -1; break; }
+          n++;
         }
         edgeCache.set(key, n);
         return n;
@@ -705,11 +921,20 @@
      * nothing sits on that line; knights, escorted/captured pieces and anything blocked use findRoute.
      */
     function planRoute(vPieces, piece, destX, destY, allowStraight) {
-      if (allowStraight && isStraightPathClear(vPieces, piece, destX, destY)) {
+      const pathOf = wps => [{ x: piece.x, y: piece.y }, ...wps, { x: destX, y: destY }];
+      if (allowStraight && assignNudges(vPieces, piece, pathOf([])).failed.length === 0) {
         return { cost: Math.hypot(destX - piece.x, destY - piece.y), waypoints: [] };
       }
-      const route = findRoute(vPieces, piece, destX, destY);
-      return route.waypoints ? route : { cost: Infinity, waypoints: [] };
+      // Pieces that cannot be nudged clear of the whole path become rigid obstacles and the search is repeated
+      const rigid = new Set();
+      for (let attempt = 0; attempt < 24; attempt++) {
+        const route = findRoute(vPieces, piece, destX, destY, rigid);
+        if (!route.waypoints) break;
+        const { failed } = assignNudges(vPieces, piece, pathOf(route.waypoints));
+        if (!failed.length) return route;
+        failed.forEach(id => rigid.add(id));
+      }
+      return { cost: Infinity, waypoints: [] };
     }
 
     // Picks the free graveyard slot (and route to it) with the lowest total cost for this piece
@@ -736,61 +961,11 @@
       const path = [{ x: startX, y: startY }, ...(waypoints || []), { x: destX, y: destY }];
       if (Math.hypot(destX - startX, destY - startY) < 1e-4 && path.length === 2) return;
 
-      // Minimum center-to-center distance in square units
-      const minClearanceSq = (CONFIG.pieceDiaMm + CONFIG.safetyMarginMm) / CONFIG.squareMm;
-      const triggerRadius = Math.max(minClearanceSq, 0.56);
-      const maxNudge = CONFIG.nudgeRatio;
-
-      // Find all pieces along every leg of the path that need to be nudged to their square edge
-      const blockers = [];
-      for (let li = 0; li < path.length - 1; li++) {
-      const legAx = path[li].x, legAy = path[li].y, legBx = path[li + 1].x, legBy = path[li + 1].y;
-      const legLen = Math.hypot(legBx - legAx, legBy - legAy);
-      if (legLen < 1e-4) continue;
-      // Unit normal to this leg
-      const nx = -(legBy - legAy) / legLen;
-      const ny = (legBx - legAx) / legLen;
-      for (const other of vPieces) {
-        if (other.id === movingPiece.id) continue;
-        if (blockers.some(b => b.piece.id === other.id)) continue;
-        const { dist, cx, cy, t } = pointToSegmentDist(other.x, other.y, legAx, legAy, legBx, legBy);
-        if (li === 0 && t <= 0.01) continue; // Ignore the start of the whole path
-        if (li === path.length - 2 && t >= 0.99) continue; // Ignore the end of the whole path
-
-        if (dist < triggerRadius) {
-          let offX = other.x - cx;
-          let offY = other.y - cy;
-          const offLen = Math.hypot(offX, offY);
-          let pushX, pushY;
-
-          if (offLen > 1e-3) {
-            pushX = offX / offLen;
-            pushY = offY / offLen;
-          } else {
-            // Piece center sits directly on the line: push perpendicular to the line
-            pushX = nx;
-            pushY = ny;
-          }
-
-          const sqCenter = squareCenter(other.col, other.row);
-          const scale = Math.max(Math.abs(pushX), Math.abs(pushY), 0.707);
-          const nudgeX = Math.max(sqCenter.x - maxNudge, Math.min(sqCenter.x + maxNudge, sqCenter.x + (pushX / scale) * maxNudge));
-          const nudgeY = Math.max(sqCenter.y - maxNudge, Math.min(sqCenter.y + maxNudge, sqCenter.y + (pushY / scale) * maxNudge));
-
-          blockers.push({
-            piece: other,
-            leg: li,
-            t,
-            origX: other.x,
-            origY: other.y,
-            nudgeX,
-            nudgeY
-          });
-        }
-      }
-      }
-
-      blockers.sort((a, b) => a.leg - b.leg || a.t - b.t);
+      const { nudges, failed } = assignNudges(vPieces, movingPiece, path);
+      if (failed.length) console.warn('Planner: no edge nudge clears the path for pieces', failed);
+      const blockers = nudges
+        .map(n => ({ piece: n.piece, leg: n.leg, t: n.t, origX: n.piece.x, origY: n.piece.y, nudgeX: n.x, nudgeY: n.y }))
+        .sort((a, b) => a.leg - b.leg || a.t - b.t);
 
       // 1. Nudge each blocking piece to the edge of its square
       for (const b of blockers) {
@@ -1305,7 +1480,7 @@
           const nearCol = Math.floor(cmd.x);
           const nearRow = Math.floor(cmd.y);
           const distCenter = Math.hypot(cmd.x - (nearCol + 0.5), cmd.y - (nearRow + 0.5));
-          if (distCenter < 0.15) {
+          if (distCenter < 0.05) {
             p.col = nearCol;
             p.row = nearRow;
             p.nudged = false;
@@ -1335,12 +1510,9 @@
       if (key === 'squareMm') {
         CONFIG.squareMm = num;
         document.getElementById('lblSquareMm').textContent = `${num} mm`;
-      } else if (key === 'pieceDiaMm') {
-        CONFIG.pieceDiaMm = num;
-        document.getElementById('lblPieceMm').textContent = `${num} mm`;
-      } else if (key === 'nudgePct') {
-        CONFIG.nudgeRatio = num / 100;
-        document.getElementById('lblNudgeRatio').textContent = `${num}%`;
+      } else if (key === 'edgeMarginMm') {
+        CONFIG.edgeMarginMm = num;
+        document.getElementById('lblEdgeMargin').textContent = `${num} mm`;
       } else if (key === 'simSpeed') {
         CONFIG.simSpeed = num;
         document.getElementById('lblSimSpeed').textContent = `${num.toFixed(1)}x`;
@@ -1669,7 +1841,7 @@
       const isSelected = piece.id === selectedPieceId;
       const isCarried = piece.id === gantry.carryingPieceId && gantry.magnetOn;
 
-      const baseRadius = (CONFIG.pieceDiaMm / CONFIG.squareMm) * 0.5;
+      const baseRadius = pieceRadiusSq(piece);
 
       if (CONFIG.showRadii || isSelected || piece.nudged) {
         const ringPts = [];
@@ -1824,8 +1996,11 @@
       const outline = type === 'N'
         ? SLOT_KNIGHT
         : half.map(p => [-p[0], p[1]]).concat(half.slice().reverse().map(p => [p[0], p[1]]));
-      const pts = outline.map(p => [cx + p[0] * size, cy - size * 0.5 + p[1] * size, 0.01]);
       const isWhite = color === 'W';
+      // Black silhouettes are rotated 180 degrees so they read upright from Black's side of the board
+      const pts = outline.map(p => isWhite
+        ? [cx + p[0] * size, cy - size * 0.5 + p[1] * size, 0.01]
+        : [cx - p[0] * size, cy + size * 0.5 - p[1] * size, 0.01]);
       drawPoly3D(
         pts,
         hovered ? 'rgba(56,189,248,0.7)' : (isWhite ? 'rgba(241,245,249,0.55)' : 'rgba(30,41,59,0.75)'),
@@ -1833,7 +2008,10 @@
         1.2
       );
       if (type === 'N') {
-        drawPoly3D([[cx - 0.2 * size, cy - size * 0.5 + 0.72 * size, 0.012], [cx - 0.14 * size, cy - size * 0.5 + 0.72 * size, 0.012], [cx - 0.14 * size, cy - size * 0.5 + 0.78 * size, 0.012], [cx - 0.2 * size, cy - size * 0.5 + 0.78 * size, 0.012]], isWhite ? '#334155' : '#e2e8f0', null, 0.5);
+        const s = isWhite ? 1 : -1;
+        const ex = a => cx + s * a * size;
+        const ey = b => cy - s * size * 0.5 + s * b * size;
+        drawPoly3D([[ex(-0.2), ey(0.72), 0.012], [ex(-0.14), ey(0.72), 0.012], [ex(-0.14), ey(0.78), 0.012], [ex(-0.2), ey(0.78), 0.012]], isWhite ? '#334155' : '#e2e8f0', null, 0.5);
       }
     }
 
@@ -1949,7 +2127,7 @@
           ctx.setLineDash([3, 3]);
         } else {
           ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
-          ctx.lineWidth = Math.max(8, pA.scale * (CONFIG.pieceDiaMm / CONFIG.squareMm));
+          ctx.lineWidth = Math.max(8, pA.scale * (PIECE_DIA_MM.N / CONFIG.squareMm));
           ctx.lineCap = 'round';
           ctx.stroke();
 
