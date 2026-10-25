@@ -17,8 +17,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GlassPanel } from '../components/GlassPanel';
 import { MinimalistBoard } from '../components/MinimalistBoard';
+import { toAppliedMove } from '../game/ChessGame';
+import { requestComputerMove } from '../game/ComputerTurn';
+import type { AppliedMove, EngineSource } from '../game/Types';
 import { DEFAULT_BLE_NAME } from '../services/BleService';
-import { StockfishService } from '../services/StockfishService';
+import { FALLBACK_LABEL, StockfishService } from '../services/StockfishService';
+import { WebSocketUciTransport } from '../services/WebSocketUciTransport';
 import { createHardwareBridge } from '../services/hardware';
 import { colors, fonts } from '../theme';
 import type {
@@ -33,7 +37,12 @@ import { UCI_MOVE_RE, inferMoveFromOccupancy } from '../utils/occupancy';
 const ENGINE_COLOR = 'b';
 const START_CLOCK_MS = 10 * 60 * 1000;
 const DEFAULT_TARGET: Record<TransportKind, string> = { BLE: DEFAULT_BLE_NAME, WIFI: '192.168.4.1', MOCK: '' };
+// Real Stockfish runs in `npm run stockfish-bridge` on the dev laptop. iOS simulator and web reach it on
+// localhost; a phone needs the laptop's LAN IP (printed by the bridge), Android emulator ws://10.0.2.2:8765.
+const DEFAULT_ENGINE_URL = process.env.EXPO_PUBLIC_STOCKFISH_URL ?? 'ws://localhost:8765';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type EngineLink = { state: 'CONNECTING' | 'CONNECTED' | 'FALLBACK'; name: string | null };
 
 export function GameScreen({ onExit }: { onExit: () => void }) {
   const { width } = useWindowDimensions();
@@ -63,6 +72,12 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
 
   const engine = useMemo(() => new StockfishService(), []);
   useEffect(() => engine.setSkillLevel(skill), [engine, skill]);
+  const [engineUrl, setEngineUrl] = useState(DEFAULT_ENGINE_URL);
+  const [engineLink, setEngineLink] = useState<EngineLink>({ state: 'CONNECTING', name: null });
+  const [engineError, setEngineError] = useState<string | null>(null);
+  // Last computer move in the shape the ESP32 layer needs: { from: 'e7', to: 'e5', ... }.
+  const [computerMove, setComputerMove] = useState<{ move: AppliedMove; source: EngineSource } | null>(null);
+  const engineConnectSeq = useRef(0);
 
   // --- derived ----------------------------------------------------------------
   const turn = chess.turn();
@@ -81,24 +96,26 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
 
   // --- move pipeline: validate -> update board -> replay on gantry --------------
   const applyMove = useCallback(
-    (uci: string, source: MoveSource): boolean => {
+    (uci: string, source: MoveSource): Move | null => {
       const game = chessRef.current;
       const fromHuman = source === 'SCREEN' || source === 'BOARD';
-      if (fromHuman && mode === 'OFFLINE_STOCKFISH' && game.turn() === ENGINE_COLOR) return false;
+      if (fromHuman && mode === 'OFFLINE_STOCKFISH' && game.turn() === ENGINE_COLOR) return null;
       let move: Move;
       try {
         move = game.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' });
       } catch {
+        console.log(`[Game] Illegal move rejected by chess.js: ${uci} (position unchanged, Stockfish not called)`);
         setRejected(uci.slice(0, 2) as Square);
-        return false;
+        return null;
       }
+      if (fromHuman) console.log(`[Game] Player move: ${move.lan}. New FEN: ${move.after}`);
       setRejected(null);
       setSelected(null);
       setLastMove({ from: move.from, to: move.to });
       setFen(game.fen());
       // A move made by hand on the physical board is already there; everything else needs the gantry.
       if (source !== 'BOARD') void bridge.sendMove(move.lan);
-      return true;
+      return move;
     },
     [bridge, mode],
   );
@@ -150,25 +167,72 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
     [bridge, applyMove],
   );
 
-  // --- engine turn ---------------------------------------------------------------
+  // --- engine connection -----------------------------------------------------------
+  const connectEngine = useCallback(
+    async (url: string) => {
+      const seq = ++engineConnectSeq.current;
+      setEngineLink({ state: 'CONNECTING', name: null });
+      const transport = new WebSocketUciTransport(url);
+      const ok = (await transport.connect()) && (await engine.attachEngine(transport));
+      if (seq !== engineConnectSeq.current) return transport.close(); // a newer attempt took over
+      if (!ok) {
+        transport.close();
+        setEngineLink({ state: 'FALLBACK', name: null });
+        console.warn(`[Stockfish] could not reach ${url}: ${FALLBACK_LABEL} will make the computer moves`);
+        return;
+      }
+      transport.onClose(() => {
+        engine.detachEngine(transport);
+        if (seq === engineConnectSeq.current) setEngineLink({ state: 'FALLBACK', name: null });
+        console.warn(`[Stockfish] bridge disconnected: ${FALLBACK_LABEL} will make the computer moves`);
+      });
+      setEngineLink({ state: 'CONNECTED', name: engine.getEngineName() });
+    },
+    [engine],
+  );
+
   useEffect(() => {
-    if (!engineTurn || gameOver) return;
+    void connectEngine(DEFAULT_ENGINE_URL);
+    return () => engine.detachEngine();
+  }, [engine, connectEngine]);
+
+  // --- engine turn: FEN -> Stockfish -> bestmove -> chess.js -> board ----------------
+  useEffect(() => {
+    // wait for the first connection attempt so a Stockfish game never starts on the fallback by accident
+    if (!engineTurn || gameOver || engineError || engineLink.state === 'CONNECTING') return;
     let cancelled = false;
+    let searching = true;
     const fenAtStart = fen;
     setThinking(true);
+    console.log(`[Game] Computer to move. Current FEN: ${fenAtStart}`);
     (async () => {
       // the floor gives the ESP32 time to report MOVING for the player's move before we check it
-      const [uci] = await Promise.all([engine.getBestMove(fenAtStart, skill), wait(400)]);
+      const [reply] = await Promise.all([requestComputerMove(engine, fenAtStart, skill), wait(400)]);
+      searching = false;
       await waitForGantryIdle();
-      if (!cancelled && chessRef.current.fen() === fenAtStart) applyMove(uci, 'ENGINE');
+      if (cancelled || chessRef.current.fen() !== fenAtStart) {
+        console.log(`[Game] dropped stale computer move ${reply.uci}: the position changed`);
+        return;
+      }
+      const played = applyMove(reply.uci, 'ENGINE');
+      if (!played) throw new Error(`Could not apply computer move ${reply.uci}`);
+      const move = toAppliedMove(played);
+      setComputerMove({ move, source: reply.source });
+      const by = reply.source === 'fallback' ? FALLBACK_LABEL : 'REAL STOCKFISH';
+      console.log(`[Game] Computer move applied: ${move.uci} (${by})`, { from: move.from, to: move.to });
     })()
-      .catch((e) => console.warn('[engine]', e))
+      .catch((e) => {
+        if (cancelled) return;
+        console.warn('[engine]', e);
+        setEngineError(e instanceof Error ? e.message : String(e));
+      })
       .finally(() => !cancelled && setThinking(false));
     return () => {
       cancelled = true;
+      if (searching) engine.stop(); // its late bestmove is dropped by the check above
       setThinking(false);
     };
-  }, [fen, engineTurn, gameOver, engine, skill, applyMove, waitForGantryIdle]);
+  }, [fen, engineTurn, gameOver, engineError, engineLink.state, engine, skill, applyMove, waitForGantryIdle]);
 
   // --- clocks ----------------------------------------------------------------------
   useEffect(() => {
@@ -200,6 +264,9 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
     setSelected(null);
     setRejected(null);
     setClocks({ w: START_CLOCK_MS, b: START_CLOCK_MS });
+    setEngineError(null);
+    setComputerMove(null);
+    void engine.newGame(); // stops a search still running and sends ucinewgame
   };
 
   const chooseTransport = (kind: TransportKind) => {
@@ -223,13 +290,25 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
 
   // --- render ------------------------------------------------------------------------
   const opponentName = mode === 'OFFLINE_STOCKFISH' ? `Stockfish Level ${skill}` : 'Player 2';
-  const status = statusText({ chess, flagged, thinking, gantry, turn });
+  const engineLabel =
+    engineLink.state === 'CONNECTED'
+      ? `Real Stockfish connected · ${engineLink.name ?? 'UCI engine'}`
+      : engineLink.state === 'CONNECTING'
+        ? 'Connecting to Stockfish…'
+        : FALLBACK_LABEL;
+  const usingFallback = mode === 'OFFLINE_STOCKFISH' && engineLink.state === 'FALLBACK';
+  const status = statusText({ chess, flagged, thinking, gantry, turn, engineError, computerMove, usingFallback });
+  const statusAlarm = gantry === 'ERROR' || !!engineError || usingFallback || computerMove?.source === 'fallback';
 
   return (
     <SafeAreaView style={styles.screen}>
       <GlassPanel glow={connection === 'CONNECTED'}>
         <View style={styles.row}>
-          <PlayerTag name={opponentName} side="Black" />
+          <PlayerTag
+            name={opponentName}
+            side={mode === 'OFFLINE_STOCKFISH' ? `Black · ${engineLabel}` : 'Black'}
+            alarm={usingFallback}
+          />
           <Clock ms={clocks.b} active={clockRunning && turn === 'b'} />
         </View>
         <View style={[styles.row, styles.gapTop]}>
@@ -263,7 +342,7 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
           <PlayerTag name="You" side="White" />
           <Clock ms={clocks.w} active={clockRunning && turn === 'w'} />
         </View>
-        <Text style={[styles.status, gantry === 'ERROR' && { color: colors.danger }]}>{status}</Text>
+        <Text style={[styles.status, statusAlarm && { color: colors.danger }]}>{status}</Text>
         <View style={[styles.row, styles.gapTop]}>
           <ActionButton
             label="E-STOP"
@@ -278,6 +357,7 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
             onPress={() => hardwareCommand(() => bridge.sendRehome(), 'Re-home')}
           />
           <ActionButton label="New" icon={<RotateCcw size={18} color={colors.text} />} onPress={newGame} />
+          {engineError && <ActionButton label="Retry" onPress={() => setEngineError(null)} />}
         </View>
         {mode === 'OFFLINE_STOCKFISH' && (
           <View style={styles.gapTop}>
@@ -347,6 +427,25 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
               )}
               <ActionButton label="Done" onPress={() => setSettingsOpen(false)} />
             </View>
+
+            <Text style={[styles.label, styles.gapTop]}>Stockfish bridge · {engineLabel}</Text>
+            <TextInput
+              style={styles.input}
+              value={engineUrl}
+              onChangeText={setEngineUrl}
+              placeholder="ws://<laptop IP>:8765"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="Stockfish bridge address"
+            />
+            <View style={[styles.row, styles.gapTop]}>
+              <ActionButton
+                label={engineLink.state === 'CONNECTED' ? 'Reconnect engine' : 'Connect engine'}
+                disabled={engineLink.state === 'CONNECTING'}
+                onPress={() => connectEngine(engineUrl.trim())}
+              />
+            </View>
           </GlassPanel>
         </View>
       </Modal>
@@ -360,12 +459,18 @@ function statusText({
   thinking,
   gantry,
   turn,
+  engineError,
+  computerMove,
+  usingFallback,
 }: {
   chess: Chess;
   flagged: 'w' | 'b' | null;
   thinking: boolean;
   gantry: GantryStatus;
   turn: 'w' | 'b';
+  engineError: string | null;
+  computerMove: { move: AppliedMove; source: EngineSource } | null;
+  usingFallback: boolean;
 }) {
   const side = (c: 'w' | 'b') => (c === 'w' ? 'White' : 'Black');
   const other = turn === 'w' ? 'b' : 'w';
@@ -375,8 +480,11 @@ function statusText({
   if (gantry === 'ERROR') return 'Gantry fault: clear the jam, then Re-home';
   if (gantry === 'HOMING') return 'Homing gantry…';
   if (gantry === 'MOVING') return 'Gantry moving piece…';
-  if (thinking) return 'Stockfish is thinking…';
-  return `${side(turn)} to move${chess.inCheck() ? ' · Check' : ''}`;
+  if (engineError) return `Engine error: ${engineError} · tap Retry`;
+  if (thinking) return usingFallback ? `${FALLBACK_LABEL} is thinking…` : 'Stockfish is thinking…';
+  const engineName = computerMove?.source === 'fallback' ? FALLBACK_LABEL : 'Stockfish';
+  const reply = computerMove ? ` · ${engineName} played ${computerMove.move.from}→${computerMove.move.to}` : '';
+  return `${side(turn)} to move${chess.inCheck() ? ' · Check' : ''}${reply}`;
 }
 
 const titleCase = (s: string) => s[0] + s.slice(1).toLowerCase();
@@ -386,11 +494,11 @@ function formatClock(ms: number) {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
-function PlayerTag({ name, side }: { name: string; side: string }) {
+function PlayerTag({ name, side, alarm }: { name: string; side: string; alarm?: boolean }) {
   return (
-    <View>
+    <View style={styles.tag}>
       <Text style={styles.name}>{name}</Text>
-      <Text style={styles.label}>{side}</Text>
+      <Text style={[styles.label, alarm && { color: colors.danger, fontWeight: '700' }]}>{side}</Text>
     </View>
   );
 }
@@ -514,6 +622,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   gapTop: { marginTop: 12 },
   boardWrap: { alignItems: 'center' },
+  tag: { flexShrink: 1 },
   name: { color: colors.text, fontFamily: fonts.sans, fontSize: 16, fontWeight: '600' },
   label: { color: colors.textMuted, fontFamily: fonts.sans, fontSize: 12, marginBottom: 4 },
   title: { color: colors.text, fontFamily: fonts.sans, fontSize: 20, fontWeight: '700', marginBottom: 12 },
