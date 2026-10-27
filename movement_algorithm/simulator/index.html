@@ -747,18 +747,18 @@
       return pieceRadiusSq(a) + pieceRadiusSq(b) + CONFIG.safetyMarginMm / CONFIG.squareMm;
     }
 
-    // The 8 spots where a piece's base touches its own square's edge/corner (minus a small margin).
+    // The 4 spots where a piece's base touches its own square's edge (minus a small margin) — straight
+    // up/down/left/right only, never diagonally to a corner, so a nudge is a pure X move or a pure Y move.
     // A nudged piece never leaves its own square, so nudged pieces can never collide with each other.
     function nudgeCandidates(o) {
       const home = squareCenter(o.col, o.row);
       const e = Math.max(0, 0.5 - pieceRadiusSq(o) - CONFIG.edgeMarginMm / CONFIG.squareMm);
-      const out = [];
-      for (const dx of [-1, 0, 1]) {
-        for (const dy of [-1, 0, 1]) {
-          if (dx || dy) out.push({ x: home.x + dx * e, y: home.y + dy * e });
-        }
-      }
-      return out;
+      return [
+        { x: home.x + e, y: home.y },
+        { x: home.x - e, y: home.y },
+        { x: home.x, y: home.y + e },
+        { x: home.x, y: home.y - e }
+      ];
     }
 
     function minLegDist(x, y, legs) {
