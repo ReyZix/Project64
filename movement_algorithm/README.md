@@ -80,7 +80,7 @@ Stop the server with `Ctrl+C`. If port 8000 is busy, use another port (for examp
 |--------|---------|
 | `TRAVEL_MAGNET_OFF` | Move the carriage without a piece |
 | `MAGNET_ON` | Engage the 12V electromagnet |
-| `MOVE_PIECE_STRAIGHT` | Drag a piece along a straight line (orthogonal, diagonal, or any vector) |
+| `MOVE_PIECE_STRAIGHT` | Drag a piece along a straight line (orthogonal or 45° diagonal only) |
 | `MAGNET_OFF` | Release the piece |
 
 ### Algorithm (`MovementPlanner::planMove`)

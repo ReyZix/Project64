@@ -64,7 +64,7 @@ struct GridCoord {
 enum class CommandAction : uint8_t {
     TRAVEL_MAGNET_OFF = 0, // Move carriage without piece
     MAGNET_ON,             // Engage 12V electromagnet
-    MOVE_PIECE_STRAIGHT,   // Move piece in straight line (orthogonal, diagonal, or arbitrary vector)
+    MOVE_PIECE_STRAIGHT,   // Move piece in straight line (orthogonal or 45-degree diagonal only)
     MAGNET_OFF             // Release 12V electromagnet
 };
 

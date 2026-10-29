@@ -413,7 +413,8 @@
 
       const tryMove = (p, col, row, tag) => {
         const dest = squareCenter(col, row);
-        const route = planRoute(vPieces, p, dest.x, dest.y, p.type !== 'N');
+        const inGraveyard = p.col < 0 || p.col > 7 || col < 0 || col > 7;
+        const route = planRoute(vPieces, p, dest.x, dest.y, !inGraveyard && p.type !== 'N');
         if (!isFinite(route.cost)) return false;
         planStraightSegmentWithEdgeNudging(
           vPieces, p, dest.x, dest.y, cmds, segs, simGantry,
@@ -885,7 +886,11 @@
         const node = Math.floor(s / 9), dirIn = s % 9;
         const ix = (node % W) + MIN_X, iy = Math.floor(node / W) + MIN_Y;
         if (ix === tx && iy === ty) { goalState = s; break; }
+        const isCenter = (ix & 1) !== 0 && (iy & 1) !== 0;
+        const isCorner = (ix & 1) === 0 && (iy & 1) === 0;
         for (let d = 0; d < 8; d++) {
+          if (isCorner && dirIn >= 4 && d !== dirIn) continue;
+          if (d >= 4 && !isCenter && !(isCorner && dirIn === d)) continue;
           const nx = ix + DIRS[d][0], ny = iy + DIRS[d][1];
           if (nx < MIN_X || nx > MAX_X || ny < MIN_Y || ny > MAX_Y) continue;
           const nudges = edgeNudges(ix, iy, d);
@@ -920,9 +925,16 @@
      * Route for one piece. Pieces that move like a line (pawn, bishop, rook, queen, king) travel straight when
      * nothing sits on that line; knights, escorted/captured pieces and anything blocked use findRoute.
      */
+    // Only horizontal (0°), vertical (90°), or exact 45° diagonal movements are ever permitted.
+    function isOrthoOr45(ax, ay, bx, by) {
+      const dx = Math.abs(bx - ax);
+      const dy = Math.abs(by - ay);
+      return dx < 1e-6 || dy < 1e-6 || Math.abs(dx - dy) < 1e-6;
+    }
+
     function planRoute(vPieces, piece, destX, destY, allowStraight) {
       const pathOf = wps => [{ x: piece.x, y: piece.y }, ...wps, { x: destX, y: destY }];
-      if (allowStraight && assignNudges(vPieces, piece, pathOf([])).failed.length === 0) {
+      if (allowStraight && isOrthoOr45(piece.x, piece.y, destX, destY) && assignNudges(vPieces, piece, pathOf([])).failed.length === 0) {
         return { cost: Math.hypot(destX - piece.x, destY - piece.y), waypoints: [] };
       }
       // Pieces that cannot be nudged clear of the whole path become rigid obstacles and the search is repeated
@@ -934,7 +946,8 @@
         if (!failed.length) return route;
         failed.forEach(id => rigid.add(id));
       }
-      return { cost: Infinity, waypoints: [] };
+      const fallbackWps = isOrthoOr45(piece.x, piece.y, destX, destY) ? [] : [{ x: destX, y: piece.y }];
+      return { cost: Infinity, waypoints: fallbackWps };
     }
 
     // Picks the free graveyard slot (and route to it) with the lowest total cost for this piece
@@ -1448,6 +1461,8 @@
         const wBishop = pieces.find(p => p.color === 'W' && p.type === 'B' && p.col === 2 && p.row === 0);
         if (bKnight && wBishop) {
           bKnight.col = 4; bKnight.row = 3; Object.assign(bKnight, squareCenter(4, 3));
+          const pC2 = pieces.find(p => p.color === 'W' && p.type === 'P' && p.col === 2 && p.row === 1);
+          if (pC2) { pC2.col = 2; pC2.row = 2; Object.assign(pC2, squareCenter(2, 2)); }
           wBishop.col = 2; wBishop.row = 1; Object.assign(wBishop, squareCenter(2, 1));
           planCompleteChessMove(wBishop.id, 4, 3);
         }

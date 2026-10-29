@@ -105,6 +105,9 @@ bool MovementPlanner::isStraightPathClear(
     Point2D dest
 ) const {
     Point2D s = pieces[pieceIdx].currentPos;
+    float dx = std::fabs(dest.x - s.x);
+    float dy = std::fabs(dest.y - s.y);
+    if (dx > 1e-4f && dy > 1e-4f && std::fabs(dx - dy) > 1e-4f) return false;
     float hard = hardRadius();
     for (size_t i = 0; i < pieces.size(); ++i) {
         if (static_cast<int>(i) == pieceIdx) continue;
@@ -166,7 +169,11 @@ MovementPlanner::Route MovementPlanner::findRoute(
         int node = s / 9, dirIn = s % 9;
         int ix = node % kW + kMinX, iy = node / kW + kMinY;
         if (ix == tx && iy == ty) { goalState = s; break; }
+        const bool isCenter = ((ix & 1) != 0) && ((iy & 1) != 0);
+        const bool isCorner = ((ix & 1) == 0) && ((iy & 1) == 0);
         for (int d = 0; d < 8; ++d) {
+            if (isCorner && dirIn >= 4 && d != dirIn) continue;
+            if (d >= 4 && !isCenter && !(isCorner && dirIn == d)) continue;
             int nx = ix + kDirs[d][0], ny = iy + kDirs[d][1];
             if (nx < kMinX || nx > kMaxX || ny < kMinY || ny > kMaxY) continue;
             int nudges = edgeNudges(ix, iy, d);
@@ -218,6 +225,11 @@ MovementPlanner::Route MovementPlanner::planRoute(
     if (!r.reachable) {
         r.cost = 1e9f;
         r.waypoints.clear();
+        Point2D s = pieces[pieceIdx].currentPos;
+        float dx = std::fabs(dest.x - s.x), dy = std::fabs(dest.y - s.y);
+        if (dx > 1e-4f && dy > 1e-4f && std::fabs(dx - dy) > 1e-4f) {
+            r.waypoints.push_back({dest.x, s.y});
+        }
     }
     return r;
 }
@@ -316,6 +328,17 @@ void MovementPlanner::planPointToPointWithEdgeNudging(
             targetNudge.x = std::max(sqCenter.x - maxNudge, std::min(sqCenter.x + maxNudge, targetNudge.x));
             targetNudge.y = std::max(sqCenter.y - maxNudge, std::min(sqCenter.y + maxNudge, targetNudge.y));
 
+            const Point2D candidates[4] = {
+                {sqCenter.x + maxNudge, sqCenter.y},
+                {sqCenter.x - maxNudge, sqCenter.y},
+                {sqCenter.x, sqCenter.y + maxNudge},
+                {sqCenter.x, sqCenter.y - maxNudge}
+            };
+            float bestD = -1.0f;
+            for (const auto& c : candidates) {
+                float cd = pointToSegmentDistance(c, legA, legB);
+                if (cd > bestD) { bestD = cd; targetNudge = c; }
+            }
             nudgedList.push_back({static_cast<int>(i), pPos, targetNudge});
         }
     }
