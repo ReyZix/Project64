@@ -45,7 +45,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "backgroundColor": "#0D1117"
   }

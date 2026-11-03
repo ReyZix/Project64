@@ -1,6 +1,6 @@
 // Run: npm run test:stockfish  (plain Node; starts scripts/stockfish-bridge.mjs with real Stockfish)
 //
-// Drives the same code GameScreen uses: chess.js -> FEN -> WebSocketUciTransport -> bridge -> Stockfish
+// Optional desktop UCI bridge diagnostic. GameScreen now uses bundled on-device Stockfish.
 // -> bestmove -> parseUciMove -> chess.js. Nothing here is mocked except the screen itself.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';

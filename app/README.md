@@ -1,6 +1,6 @@
 # Project 64 — Companion App
 
-React Native (Expo SDK 58, TypeScript) app that runs the game for the Project 64 robotic chessboard. It enforces the rules with `chess.js`, plays an engine opponent, and drives the ESP32 gantry over BLE, Wi-Fi, or a simulated board.
+React Native (Expo SDK 58, TypeScript) app that runs the game for the Project 64 robotic chessboard. It enforces the rules with `chess.js`, runs Stockfish locally on the phone, and sends moves to the ESP32 over BLE, Wi-Fi, or a simulated board.
 
 ## Setup
 
@@ -39,7 +39,8 @@ src/
     hardware/WifiWebSocketHardwareAdapter.ts
     hardware/MockHardwareAdapter.ts
     hardware/index.ts             createHardwareBridge('BLE' | 'WIFI' | 'MOCK')
-    StockfishService.ts           UCI bridge -> REST -> built-in chess.js search
+    StockfishService.ts           UCI game engine interface and fallback search
+    LocalStockfish.tsx            bundled Stockfish 19 lite engine in a hidden WebView
   components/GlassPanel.tsx       frosted HUD container
   components/MinimalistBoard.tsx  flat SVG board and pieces
   screens/GameScreen.tsx          HUDs, settings sheet, full game loop
@@ -70,9 +71,6 @@ scripts/selfcheck.ts              `npm test`
 
 ## Engine
 
-`StockfishService.getBestMove(fen, depth)` tries these in order:
-1. A real engine attached through `attachEngine(transport)`. Any line-based UCI pipe works: a native Stockfish module, a WASM worker, or a socket to a desktop engine.
-2. A REST endpoint, if you pass `new StockfishService({ restUrl })`. It is called as `GET <url>?fen=&depth=` and must return JSON with a `bestmove` field.
-3. A built-in 2-ply material search, which is weak but always available.
+The app bundles Stockfish 19 lite single-threaded WASM and runs it in a hidden WebView on the phone. The engine receives FEN positions locally and returns UCI moves; those moves go through the selected hardware bridge. With **BLE** selected, the app writes the move to the ESP32's `0xCB02` characteristic. No laptop Stockfish bridge or Wi-Fi engine connection is needed.
 
-No native Stockfish binary is bundled yet, so the app currently uses option 3.
+If the local engine cannot start, the app labels its built-in 2-ply material search as a fallback. The bundled engine is covered by GPL-3.0; see `assets/stockfish/COPYING.txt`. Adding `react-native-webview` requires rebuilding the development app with `npx expo run:ios --device` once.

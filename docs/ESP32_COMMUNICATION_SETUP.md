@@ -61,7 +61,7 @@ Choose your actual phone. If it says Untrusted Developer, go to Settings > Gener
 ## Running it again 
 
 1. Plug in the ESP32. Keep it connected to a computer if you want serial logs or want to type simulated board moves.
-2. Put the laptop and phone on the same Wi-Fi network. From app, run:
+2. Put the laptop and phone on the same Wi-Fi network for the Expo development server. Stockfish itself runs on the phone. From app, run:
 
 ```bash
 npx expo start --dev-client --lan
@@ -70,6 +70,8 @@ npx expo start --dev-client --lan
 3. Leave the terminal running and scan its current QR code with the iPhone Camera.
 4. In Project 64, tap Play Game, then the app's Settings gear. The floating Tools button is Expo's menu.
 5. Select BLE, enter Project64, and tap Connect. Wait for Idle.
+
+If you installed the app before the on-device Stockfish update, rebuild it once with `npx expo run:ios --device` so the WebView native module is included. After that, the usual `npx expo start --dev-client --lan` command is enough for JavaScript changes.
 
 To show ESP32 -> app: start a new game, then type this in ARDUINO SERIAL MONITOR, not the laptop terminal:
 
