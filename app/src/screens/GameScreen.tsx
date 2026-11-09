@@ -7,6 +7,7 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,10 +17,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GlassPanel } from '../components/GlassPanel';
+import { LichessPanel } from '../components/LichessPanel';
 import { MinimalistBoard } from '../components/MinimalistBoard';
 import { toAppliedMove } from '../game/ChessGame';
 import { requestComputerMove } from '../game/ComputerTurn';
 import type { AppliedMove, EngineSource } from '../game/Types';
+import { useLichess } from '../game/useLichess';
 import { DEFAULT_BLE_NAME } from '../services/BleService';
 import { LocalStockfishHost, LocalStockfishTransport } from '../services/LocalStockfish';
 import { FALLBACK_LABEL, StockfishService } from '../services/StockfishService';
@@ -76,13 +79,42 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
   const [computerMove, setComputerMove] = useState<{ move: AppliedMove; source: EngineSource } | null>(null);
   const engineConnectSeq = useRef(0);
 
+  // --- online (Lichess) -----------------------------------------------------------
+  const online = mode === 'ONLINE_LICHESS';
+  const deliverOpponentRef = useRef<(uci: string) => void>(() => {});
+  // The opponent's move from Lichess waits here until the board has accepted it.
+  const pendingOpponent = useRef<string | null>(null);
+  const sendingOpponent = useRef(false);
+  const [opponentError, setOpponentError] = useState<string | null>(null);
+  const lichess = useLichess({
+    enabled: online,
+    chessRef,
+    onOpponentMove: (uci) => deliverOpponentRef.current(uci),
+    onRebuilt: () => {
+      pendingOpponent.current = null;
+      setOpponentError(null);
+      const game = chessRef.current;
+      const last = game.history({ verbose: true }).at(-1);
+      setLastMove(last ? { from: last.from, to: last.to } : null);
+      setSelected(null);
+      setFen(game.fen());
+    },
+  });
+  const lichessRef = useRef(lichess);
+  lichessRef.current = lichess;
+  const myColor = lichess.game?.myColor === 'black' ? 'b' : 'w';
+
   // --- derived ----------------------------------------------------------------
   const turn = chess.turn();
-  const flagged = clocks.w <= 0 ? 'w' : clocks.b <= 0 ? 'b' : null;
-  const gameOver = chess.isGameOver() || flagged !== null;
-  const engineTurn = mode === 'OFFLINE_STOCKFISH' && turn === ENGINE_COLOR;
-  const inputLocked = gantry !== 'IDLE' || thinking || engineTurn || gameOver;
-  const clockRunning = chess.history().length > 0 && !gameOver;
+  // Online, Lichess decides when time runs out and when the game ends.
+  const flagged = online ? null : clocks.w <= 0 ? 'w' : clocks.b <= 0 ? 'b' : null;
+  const gameOver = online ? lichess.phase === 'FINISHED' || chess.isGameOver() : chess.isGameOver() || flagged !== null;
+  const engineTurn = mode === 'OFFLINE_STOCKFISH' && turn === ENGINE_COLOR; // never online: Lichess forbids engine help
+  const onlineLocked = online && !lichess.isMyTurn(turn);
+  const inputLocked = gantry !== 'IDLE' || thinking || engineTurn || gameOver || onlineLocked;
+  const clockRunning = online
+    ? lichess.phase === 'PLAYING' && chess.history().length >= 2
+    : chess.history().length > 0 && !gameOver;
   const checkSquare = chess.inCheck()
     ? chess.board().flat().find((p) => p?.type === 'k' && p.color === turn)?.square
     : null;
@@ -97,6 +129,7 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
       const game = chessRef.current;
       const fromHuman = source === 'SCREEN' || source === 'BOARD';
       if (fromHuman && mode === 'OFFLINE_STOCKFISH' && game.turn() === ENGINE_COLOR) return null;
+      if (fromHuman && mode === 'ONLINE_LICHESS' && !lichessRef.current.isMyTurn(game.turn())) return null;
       let move: Move;
       try {
         move = game.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' });
@@ -106,12 +139,16 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
         return null;
       }
       if (fromHuman) console.log(`[Game] Player move: ${move.lan}. New FEN: ${move.after}`);
+      if (source === 'REMOTE') console.log(`[Game] Opponent move applied: ${move.lan}. New FEN: ${move.after}`);
       setRejected(null);
       setSelected(null);
       setLastMove({ from: move.from, to: move.to });
       setFen(game.fen());
       // A move made by hand on the physical board is already there; everything else needs the gantry.
-      if (sendToHardware && source !== 'BOARD') void bridge.sendMove(move.lan);
+      // Online, our move only goes to the gantry once Lichess accepts it, so a refused move never moves a piece.
+      if (fromHuman && mode === 'ONLINE_LICHESS') {
+        void lichessRef.current.sendMove(move.lan).then((ok) => ok && source === 'SCREEN' && bridge.sendMove(move.lan));
+      } else if (sendToHardware && source !== 'BOARD') void bridge.sendMove(move.lan);
       return move;
     },
     [bridge, mode],
@@ -133,6 +170,35 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
       }),
     [bridge],
   );
+
+  // --- online opponent's move: board first, then the screen -----------------------
+  // Like Stockfish's moves: the move is sent to the board once it is idle, and the screen only shows it
+  // after the board accepted it. If sending fails it stays pending and Retry sends it again.
+  const deliverOpponentMove = useCallback(
+    async (uci: string) => {
+      if (sendingOpponent.current && pendingOpponent.current === uci) return;
+      pendingOpponent.current = uci;
+      sendingOpponent.current = true;
+      setOpponentError(null);
+      try {
+        await waitForGantryIdle();
+        if (pendingOpponent.current !== uci) return; // the game was reloaded from Lichess meanwhile
+        const sent = await bridge.sendMove(uci);
+        if (pendingOpponent.current !== uci) return;
+        if (!sent) {
+          console.warn(`[Game] Could not send opponent move ${uci} to the board`);
+          setOpponentError(`Could not send ${uci} to the board`);
+          return;
+        }
+        pendingOpponent.current = null;
+        if (!applyMove(uci, 'REMOTE', false)) setOpponentError(`Could not apply opponent move ${uci}`);
+      } finally {
+        sendingOpponent.current = false;
+      }
+    },
+    [bridge, applyMove, waitForGantryIdle],
+  );
+  deliverOpponentRef.current = (uci) => void deliverOpponentMove(uci);
 
   // --- hardware subscriptions ---------------------------------------------------
   useEffect(() => {
@@ -236,7 +302,27 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
     };
   }, [fen, engineTurn, gameOver, engineError, engineLink.state, engine, skill, bridge, applyMove, waitForGantryIdle]);
 
+  // Back in the online lobby (or just signed in), start from a clean board.
+  useEffect(() => {
+    if (!online || (lichess.phase !== 'LOBBY' && lichess.phase !== 'SIGNED_OUT')) return;
+    pendingOpponent.current = null;
+    setOpponentError(null);
+    const game = chessRef.current;
+    if (game.history().length === 0) return;
+    game.reset();
+    setFen(game.fen());
+    setLastMove(null);
+    setSelected(null);
+    setRejected(null);
+    setClocks({ w: START_CLOCK_MS, b: START_CLOCK_MS });
+  }, [online, lichess.phase]);
+
   // --- clocks ----------------------------------------------------------------------
+  const lichessClocks = lichess.game?.clocks;
+  useEffect(() => {
+    if (online && lichessClocks) setClocks(lichessClocks);
+  }, [online, lichessClocks]);
+
   useEffect(() => {
     if (!clockRunning) return;
     let last = Date.now();
@@ -291,7 +377,16 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
   };
 
   // --- render ------------------------------------------------------------------------
-  const opponentName = mode === 'OFFLINE_STOCKFISH' ? `Stockfish Level ${skill}` : 'Player 2';
+  const opponentName = online
+    ? `${lichess.game?.opponent ?? 'Online opponent'}${lichess.game?.opponentRating ? ` (${lichess.game.opponentRating})` : ''}`
+    : mode === 'OFFLINE_STOCKFISH'
+      ? `Stockfish Level ${skill}`
+      : 'Player 2';
+  // The player is always at the bottom; online as Black that means the board and clocks flip.
+  const bottomColor = online ? myColor : 'w';
+  const topColor = bottomColor === 'w' ? 'b' : 'w';
+  const colorName = (c: 'w' | 'b') => (c === 'w' ? 'White' : 'Black');
+  const myName = online && lichess.account ? lichess.account.username : 'You';
   const engineLabel =
     engineLink.state === 'CONNECTED'
       ? `Real Stockfish connected · ${engineLink.name ?? 'UCI engine'}`
@@ -299,149 +394,161 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
         ? 'Connecting to Stockfish…'
         : FALLBACK_LABEL;
   const usingFallback = mode === 'OFFLINE_STOCKFISH' && engineLink.state === 'FALLBACK';
-  const status = statusText({ chess, flagged, thinking, gantry, turn, engineError, computerMove, usingFallback });
-  const statusAlarm = gantry === 'ERROR' || !!engineError || usingFallback || computerMove?.source === 'fallback';
+  const status = online
+    ? onlineStatusText({ chess, gantry, lichess, myTurn: lichess.isMyTurn(turn), opponentError })
+    : statusText({ chess, flagged, thinking, gantry, turn, engineError, computerMove, usingFallback });
+  const statusAlarm =
+    gantry === 'ERROR' || !!engineError || usingFallback || computerMove?.source === 'fallback' || (online && !!opponentError);
 
   return (
     <SafeAreaView style={styles.screen}>
-      <GlassPanel glow={connection === 'CONNECTED'}>
-        <View style={styles.row}>
-          <PlayerTag
-            name={opponentName}
-            side={mode === 'OFFLINE_STOCKFISH' ? `Black · ${engineLabel}` : 'Black'}
-            alarm={usingFallback}
-          />
-          <Clock ms={clocks.b} active={clockRunning && turn === 'b'} />
-        </View>
-        <View style={[styles.row, styles.gapTop]}>
-          <LinkBadge transport={transport} connection={connection} gantry={gantry} />
+      {/* Scrolls only when the content is taller than the phone (e.g. the online lobby with challenges). */}
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <GlassPanel glow={connection === 'CONNECTED'}>
           <View style={styles.row}>
-            <IconButton label="Settings" onPress={() => setSettingsOpen(true)}>
-              <Settings size={18} color={colors.text} />
-            </IconButton>
-            <IconButton label="Back to home" onPress={onExit}>
-              <ArrowLeft size={18} color={colors.text} />
-            </IconButton>
+            <PlayerTag
+              name={opponentName}
+              side={mode === 'OFFLINE_STOCKFISH' ? `Black · ${engineLabel}` : online ? `${colorName(topColor)} · Lichess` : 'Black'}
+              alarm={usingFallback}
+            />
+            <Clock ms={clocks[topColor]} active={clockRunning && turn === topColor} />
           </View>
-        </View>
-      </GlassPanel>
-
-      <View style={styles.boardWrap}>
-        <MinimalistBoard
-          fen={fen}
-          size={boardSize}
-          selected={selected}
-          legalTargets={legalTargets}
-          lastMove={lastMove}
-          dangerSquare={rejected ?? checkSquare}
-          disabled={inputLocked}
-          onSquarePress={onSquarePress}
-        />
-      </View>
-
-      <GlassPanel>
-        <View style={styles.row}>
-          <PlayerTag name="You" side="White" />
-          <Clock ms={clocks.w} active={clockRunning && turn === 'w'} />
-        </View>
-        <Text style={[styles.status, statusAlarm && { color: colors.danger }]}>{status}</Text>
-        <View style={[styles.row, styles.gapTop]}>
-          <ActionButton
-            label="E-STOP"
-            danger
-            icon={<OctagonX size={18} color="#fff" />}
-            onPress={() => hardwareCommand(() => bridge.sendEmergencyStop(), 'Emergency stop')}
-          />
-          <ActionButton
-            label="Re-home"
-            icon={<House size={18} color={colors.text} />}
-            disabled={gantry === 'MOVING' || gantry === 'HOMING'}
-            onPress={() => hardwareCommand(() => bridge.sendRehome(), 'Re-home')}
-          />
-          <ActionButton label="New" icon={<RotateCcw size={18} color={colors.text} />} onPress={newGame} />
-          {engineError && <ActionButton label="Retry" onPress={() => setEngineError(null)} />}
-        </View>
-        {mode === 'OFFLINE_STOCKFISH' && (
-          <View style={styles.gapTop}>
-            <Text style={styles.label}>Engine difficulty · {skill}</Text>
-            <Slider
-              minimumValue={1}
-              maximumValue={20}
-              step={1}
-              value={skill}
-              onSlidingComplete={setSkill}
-              minimumTrackTintColor={colors.ok}
-              maximumTrackTintColor={colors.glassBorder}
-              thumbTintColor={colors.text}
-              accessibilityLabel="Engine difficulty"
-            />
+          <View style={[styles.row, styles.gapTop]}>
+            <LinkBadge transport={transport} connection={connection} gantry={gantry} />
+            <View style={styles.row}>
+              <IconButton label="Settings" onPress={() => setSettingsOpen(true)}>
+                <Settings size={18} color={colors.text} />
+              </IconButton>
+              <IconButton label="Back to home" onPress={onExit}>
+                <ArrowLeft size={18} color={colors.text} />
+              </IconButton>
+            </View>
           </View>
-        )}
-      </GlassPanel>
+        </GlassPanel>
 
-      <Modal visible={settingsOpen} transparent animationType="fade" onRequestClose={() => setSettingsOpen(false)}>
-        <View style={styles.backdrop}>
-          <GlassPanel style={styles.sheet} glow={connection === 'CONNECTED'}>
-            <Text style={styles.title}>Settings</Text>
+        <View style={styles.boardWrap}>
+          <MinimalistBoard
+            fen={fen}
+            size={boardSize}
+            selected={selected}
+            legalTargets={legalTargets}
+            lastMove={lastMove}
+            dangerSquare={rejected ?? checkSquare}
+            disabled={inputLocked}
+            onSquarePress={onSquarePress}
+            flipped={bottomColor === 'b'}
+          />
+        </View>
 
-            <Text style={styles.label}>Game mode</Text>
-            <Segmented
-              value={mode}
-              onChange={setMode}
-              options={[
-                ['OFFLINE_PASS_AND_PLAY', 'Pass & Play'],
-                ['OFFLINE_STOCKFISH', 'Stockfish'],
-              ]}
+        <GlassPanel>
+          <View style={styles.row}>
+            <PlayerTag name={myName} side={colorName(bottomColor)} />
+            <Clock ms={clocks[bottomColor]} active={clockRunning && turn === bottomColor} />
+          </View>
+          <Text style={[styles.status, statusAlarm && { color: colors.danger }]}>{status}</Text>
+          <View style={[styles.row, styles.gapTop]}>
+            <ActionButton
+              label="E-STOP"
+              danger
+              icon={<OctagonX size={18} color="#fff" />}
+              onPress={() => hardwareCommand(() => bridge.sendEmergencyStop(), 'Emergency stop')}
             />
-
-            <Text style={[styles.label, styles.gapTop]}>Hardware link</Text>
-            <Segmented
-              value={transport}
-              onChange={chooseTransport}
-              options={[
-                ['BLE', 'BLE'],
-                ['WIFI', 'Wi-Fi (LAN)'],
-                ['MOCK', 'Simulator Mock'],
-              ]}
+            <ActionButton
+              label="Re-home"
+              icon={<House size={18} color={colors.text} />}
+              disabled={gantry === 'MOVING' || gantry === 'HOMING'}
+              onPress={() => hardwareCommand(() => bridge.sendRehome(), 'Re-home')}
             />
-            {transport !== 'MOCK' && (
-              <TextInput
-                style={styles.input}
-                value={target}
-                onChangeText={setTarget}
-                placeholder={transport === 'BLE' ? 'Device name or id' : 'ESP32 IP address'}
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType={transport === 'WIFI' ? 'numbers-and-punctuation' : 'default'}
-                accessibilityLabel={transport === 'BLE' ? 'BLE device name' : 'ESP32 IP address'}
-              />
+            {!online && <ActionButton label="New" icon={<RotateCcw size={18} color={colors.text} />} onPress={newGame} />}
+            {!online && engineError && <ActionButton label="Retry" onPress={() => setEngineError(null)} />}
+            {online && opponentError && pendingOpponent.current && (
+              <ActionButton label="Retry" onPress={() => void deliverOpponentMove(pendingOpponent.current ?? '')} />
             )}
-            <View style={[styles.row, styles.gapTop]}>
-              {connection === 'CONNECTED' ? (
-                <ActionButton label="Disconnect" onPress={() => bridge.disconnect()} />
-              ) : (
-                <ActionButton
-                  label={connection === 'DISCONNECTED' ? 'Connect' : `${titleCase(connection)}…`}
-                  disabled={connection !== 'DISCONNECTED'}
-                  onPress={connect}
+          </View>
+          {online && <LichessPanel lichess={lichess} />}
+          {mode === 'OFFLINE_STOCKFISH' && (
+            <View style={styles.gapTop}>
+              <Text style={styles.label}>Engine difficulty · {skill}</Text>
+              <Slider
+                minimumValue={1}
+                maximumValue={20}
+                step={1}
+                value={skill}
+                onSlidingComplete={setSkill}
+                minimumTrackTintColor={colors.ok}
+                maximumTrackTintColor={colors.glassBorder}
+                thumbTintColor={colors.text}
+                accessibilityLabel="Engine difficulty"
+              />
+            </View>
+          )}
+        </GlassPanel>
+
+        <Modal visible={settingsOpen} transparent animationType="fade" onRequestClose={() => setSettingsOpen(false)}>
+          <View style={styles.backdrop}>
+            <GlassPanel style={styles.sheet} glow={connection === 'CONNECTED'}>
+              <Text style={styles.title}>Settings</Text>
+
+              <Text style={styles.label}>Game mode</Text>
+              <Segmented
+                value={mode}
+                onChange={setMode}
+                options={[
+                  ['OFFLINE_PASS_AND_PLAY', 'Pass & Play'],
+                  ['OFFLINE_STOCKFISH', 'Stockfish'],
+                  ['ONLINE_LICHESS', 'Online'],
+                ]}
+              />
+
+              <Text style={[styles.label, styles.gapTop]}>Hardware link</Text>
+              <Segmented
+                value={transport}
+                onChange={chooseTransport}
+                options={[
+                  ['BLE', 'BLE'],
+                  ['WIFI', 'Wi-Fi (LAN)'],
+                  ['MOCK', 'Simulator Mock'],
+                ]}
+              />
+              {transport !== 'MOCK' && (
+                <TextInput
+                  style={styles.input}
+                  value={target}
+                  onChangeText={setTarget}
+                  placeholder={transport === 'BLE' ? 'Device name or id' : 'ESP32 IP address'}
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType={transport === 'WIFI' ? 'numbers-and-punctuation' : 'default'}
+                  accessibilityLabel={transport === 'BLE' ? 'BLE device name' : 'ESP32 IP address'}
                 />
               )}
-              <ActionButton label="Done" onPress={() => setSettingsOpen(false)} />
-            </View>
+              <View style={[styles.row, styles.gapTop]}>
+                {connection === 'CONNECTED' ? (
+                  <ActionButton label="Disconnect" onPress={() => bridge.disconnect()} />
+                ) : (
+                  <ActionButton
+                    label={connection === 'DISCONNECTED' ? 'Connect' : `${titleCase(connection)}…`}
+                    disabled={connection !== 'DISCONNECTED'}
+                    onPress={connect}
+                  />
+                )}
+                <ActionButton label="Done" onPress={() => setSettingsOpen(false)} />
+              </View>
 
-            <Text style={[styles.label, styles.gapTop]}>On-device Stockfish · {engineLabel}</Text>
-            <View style={[styles.row, styles.gapTop]}>
-              <ActionButton
-                label={engineLink.state === 'CONNECTED' ? 'Reconnect engine' : 'Connect engine'}
-                disabled={engineLink.state === 'CONNECTING'}
-                onPress={() => { void connectEngine(); }}
-              />
-            </View>
-          </GlassPanel>
-        </View>
-      </Modal>
-      {localEngine && <LocalStockfishHost key={engineConnectSeq.current} transport={localEngine} />}
+              <Text style={[styles.label, styles.gapTop]}>On-device Stockfish · {engineLabel}</Text>
+              <View style={[styles.row, styles.gapTop]}>
+                <ActionButton
+                  label={engineLink.state === 'CONNECTED' ? 'Reconnect engine' : 'Connect engine'}
+                  disabled={engineLink.state === 'CONNECTING'}
+                  onPress={() => { void connectEngine(); }}
+                />
+              </View>
+            </GlassPanel>
+          </View>
+        </Modal>
+        {localEngine && <LocalStockfishHost key={engineConnectSeq.current} transport={localEngine} />}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -478,6 +585,39 @@ function statusText({
   const engineName = computerMove?.source === 'fallback' ? FALLBACK_LABEL : 'Stockfish';
   const reply = computerMove ? ` · ${engineName} played ${computerMove.move.from}→${computerMove.move.to}` : '';
   return `${side(turn)} to move${chess.inCheck() ? ' · Check' : ''}${reply}`;
+}
+
+function onlineStatusText({
+  chess,
+  gantry,
+  lichess,
+  myTurn,
+  opponentError,
+}: {
+  chess: Chess;
+  gantry: GantryStatus;
+  lichess: ReturnType<typeof useLichess>;
+  myTurn: boolean;
+  opponentError: string | null;
+}) {
+  switch (lichess.phase) {
+    case 'SIGNED_OUT':
+    case 'CHECKING':
+      return 'Sign in to Lichess to play people online';
+    case 'LOBBY':
+      return 'Find a random opponent or challenge a friend';
+    case 'SEEKING':
+      return 'Looking for an opponent on Lichess…';
+    case 'CHALLENGING':
+      return 'Waiting for your friend to accept…';
+    case 'FINISHED':
+      return lichess.game?.result ?? 'Game over';
+  }
+  if (gantry === 'ERROR') return 'Gantry fault: clear the jam, then Re-home';
+  if (opponentError) return `${opponentError} · tap Retry`;
+  if (gantry === 'MOVING') return 'Gantry moving piece…';
+  const check = chess.inCheck() ? ' · Check' : '';
+  return myTurn ? `Your move${check}` : `Waiting for ${lichess.game?.opponent ?? 'opponent'}…${check}`;
 }
 
 const titleCase = (s: string) => s[0] + s.slice(1).toLowerCase();
@@ -611,7 +751,8 @@ function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, gap: 12, justifyContent: 'center' },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { flexGrow: 1, paddingHorizontal: 16, paddingVertical: 12, gap: 12, justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   gapTop: { marginTop: 12 },
   boardWrap: { alignItems: 'center' },

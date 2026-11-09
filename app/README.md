@@ -25,6 +25,7 @@ npx expo run:ios       # or: npx expo run:android
 
 Open **Settings** (gear icon) and choose:
 - **BLE**: enter the advertised device name (default `Project64`) and tap Connect. This needs a physical phone, because simulators have no Bluetooth.
+- **BLE from the computer**: run `npm run web`, open the page in **Chrome or Edge** (Safari and Firefox have no Web Bluetooth), choose **BLE** in Settings and tap Connect. Chrome shows a picker; choose `Project64`. Stockfish and Lichess moves then go to the ESP32 the same way as on the phone.
 - **Wi-Fi (LAN)**: enter the ESP32's IP address (default `192.168.4.1`, the softAP address) and tap Connect.
 
 ## Layout
@@ -36,11 +37,18 @@ src/
   services/
     hardware/HardwareBridge.ts    IHardwareBridge interface + shared listener/decoder base
     BleService.ts                 BLE adapter (react-native-ble-plx), singleton
+    BleService.web.ts             web version: the same BLE link through Web Bluetooth (Chrome or Edge), used by `npm run web`
     hardware/WifiWebSocketHardwareAdapter.ts
     hardware/MockHardwareAdapter.ts
     hardware/index.ts             createHardwareBridge('BLE' | 'WIFI' | 'MOCK')
     StockfishService.ts           UCI game engine interface and fallback search
     LocalStockfish.tsx            bundled Stockfish 19 lite engine in a hidden WebView
+    LocalStockfish.web.tsx        web version: the same engine in a Web Worker, so Stockfish also works in `npm run web`
+    LichessService.ts             Lichess Board API: event/game streams, seeks, challenges, moves
+    lichessToken.ts               Lichess token in the iOS Keychain / Android Keystore (expo-secure-store)
+  game/LichessGame.ts             keeps chess.js in sync with Lichess's move list
+  game/useLichess.ts              online game state for the Game screen (lobby, streams, moves)
+  components/LichessPanel.tsx     online lobby: sign in, random opponent, challenge a friend, resign
   components/GlassPanel.tsx       frosted HUD container
   components/MinimalistBoard.tsx  flat SVG board and pieces
   screens/GameScreen.tsx          HUDs, settings sheet, full game loop
@@ -74,3 +82,26 @@ scripts/selfcheck.ts              `npm test`
 The app bundles Stockfish 19 lite single-threaded WASM and runs it in a hidden WebView on the phone. The engine receives FEN positions locally and returns UCI moves; those moves go through the selected hardware bridge. With **BLE** selected, the app writes the move to the ESP32's `0xCB02` characteristic. No laptop Stockfish bridge or Wi-Fi engine connection is needed.
 
 If the local engine cannot start, the app labels its built-in 2-ply material search as a fallback. The bundled engine is covered by GPL-3.0; see `assets/stockfish/COPYING.txt`. Adding `react-native-webview` requires rebuilding the development app with `npx expo run:ios --device` once.
+
+## Online play (Lichess)
+
+Full setup and usage guide: [`../docs/LICHESS_SETUP.md`](../docs/LICHESS_SETUP.md).
+
+In Settings choose **Online**. Sign in with a Lichess personal access token created at
+<https://lichess.org/account/oauth/token> with "Play games using the Board API" (`board:play`)
+and "Send, accept and reject challenges" (`challenge:write`). The token is stored on the phone in the Keychain/Keystore and never in the code.
+
+- **Find random opponent** creates a Board API seek. Lichess only allows Rapid or slower here (10+0 and up).
+- **Challenge** sends a challenge to a Lichess username; incoming challenges appear with Accept / Decline.
+- Your moves (screen or physical board) are checked by chess.js, sent to Lichess, and only then sent to the gantry.
+- The opponent's moves are handled like Stockfish's: sent to the gantry once it is idle, and shown on screen only after the board accepted them. If the board refuses, the status offers **Retry**.
+- Lichess's move list is the source of truth: if anything disagrees, the board is reloaded from Lichess.
+- Stockfish is never used in online games, because Lichess forbids engine help in Board API games.
+
+Testing without real accounts:
+
+```bash
+npm run test:lichess                                   # automated, against a local fake Lichess
+npm run lichess-fake                                   # fake Lichess on http://localhost:8780
+EXPO_PUBLIC_LICHESS_URL=http://localhost:8780 npm run web   # app pointed at it; sign in with "test-token"
+```

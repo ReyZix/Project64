@@ -53,8 +53,12 @@ const Piece = memo(function Piece({ type, color }: PieceProps) {
   );
 });
 
-/** Board coords with White at the bottom. */
-const toXY = (sq: Square) => ({ x: FILES.indexOf(sq[0]) * S, y: (8 - Number(sq[1])) * S });
+/** Board coords with White at the bottom, or Black at the bottom when flipped. */
+const toXY = (sq: Square, flipped = false) => {
+  const file = FILES.indexOf(sq[0]);
+  const rank = Number(sq[1]);
+  return flipped ? { x: (7 - file) * S, y: (rank - 1) * S } : { x: file * S, y: (8 - rank) * S };
+};
 
 export interface MinimalistBoardProps {
   fen: string;
@@ -66,6 +70,8 @@ export interface MinimalistBoardProps {
   dangerSquare?: Square | null;
   disabled?: boolean;
   onSquarePress?: (square: Square) => void;
+  /** Show the board from Black's side (online games where you play Black). */
+  flipped?: boolean;
 }
 
 export function MinimalistBoard({
@@ -77,6 +83,7 @@ export function MinimalistBoard({
   dangerSquare,
   disabled,
   onSquarePress,
+  flipped = false,
 }: MinimalistBoardProps) {
   const board = useMemo(() => new Chess(fen).board(), [fen]);
 
@@ -99,20 +106,26 @@ export function MinimalistBoard({
 
   const overlay = (sq: Square | null | undefined, fill: string) => {
     if (!sq) return null;
-    const { x, y } = toXY(sq);
+    const { x, y } = toXY(sq, flipped);
     return <Rect key={`o-${sq}-${fill}`} x={x} y={y} width={S} height={S} fill={fill} />;
   };
 
   const handlePress = (locationX: number, locationY: number) => {
-    const f = Math.floor((locationX / size) * 8);
-    const r = 8 - Math.floor((locationY / size) * 8);
+    const col = Math.floor((locationX / size) * 8);
+    const row = Math.floor((locationY / size) * 8);
+    const f = flipped ? 7 - col : col;
+    const r = flipped ? row + 1 : 8 - row;
     if (f >= 0 && f < 8 && r >= 1 && r <= 8) onSquarePress?.(`${FILES[f]}${r}` as Square);
   };
 
   return (
     <Pressable
       disabled={disabled}
-      onPress={(e) => handlePress(e.nativeEvent.locationX, e.nativeEvent.locationY)}
+      onPress={(e) => {
+        // On web, react-native-web gives offsetX/offsetY instead of locationX/locationY.
+        const ev = e.nativeEvent as { locationX?: number; locationY?: number; offsetX?: number; offsetY?: number };
+        handlePress(ev.locationX ?? ev.offsetX ?? -1, ev.locationY ?? ev.offsetY ?? -1);
+      }}
       accessibilityRole="adjustable"
       accessibilityLabel="Chess board"
       accessibilityState={{ disabled }}
@@ -127,13 +140,13 @@ export function MinimalistBoard({
         {board.flat().map(
           (p) =>
             p && (
-              <G key={p.square} transform={`translate(${toXY(p.square).x} ${toXY(p.square).y})`}>
+              <G key={p.square} transform={`translate(${toXY(p.square, flipped).x} ${toXY(p.square, flipped).y})`}>
                 <Piece type={p.type} color={p.color} />
               </G>
             ),
         )}
         {legalTargets.map((sq) => {
-          const { x, y } = toXY(sq);
+          const { x, y } = toXY(sq, flipped);
           return <Circle key={`t-${sq}`} cx={x + S / 2} cy={y + S / 2} r={S * 0.16} fill={colors.highlightLegal} />;
         })}
       </Svg>
