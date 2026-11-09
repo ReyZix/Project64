@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
   useWindowDimensions,
+  type ScrollViewInstance,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -400,10 +401,20 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
   const statusAlarm =
     gantry === 'ERROR' || !!engineError || usingFallback || computerMove?.source === 'fallback' || (online && !!opponentError);
 
+  // The Lichess panel is at the bottom, so scroll there once the keyboard has opened.
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const scrollToTyping = () => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
+
   return (
     <SafeAreaView style={styles.screen}>
-      {/* Scrolls only when the content is taller than the phone (e.g. the online lobby with challenges). */}
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {/* Scrolls only when the content is taller than the phone (e.g. the online lobby with challenges).
+          On iPhone it also leaves room for the keyboard, so the Lichess token and friend boxes are not covered. */}
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         <GlassPanel glow={connection === 'CONNECTED'}>
           <View style={styles.row}>
             <PlayerTag
@@ -465,7 +476,7 @@ export function GameScreen({ onExit }: { onExit: () => void }) {
               <ActionButton label="Retry" onPress={() => void deliverOpponentMove(pendingOpponent.current ?? '')} />
             )}
           </View>
-          {online && <LichessPanel lichess={lichess} />}
+          {online && <LichessPanel lichess={lichess} onInputFocus={scrollToTyping} />}
           {mode === 'OFFLINE_STOCKFISH' && (
             <View style={styles.gapTop}>
               <Text style={styles.label}>Engine difficulty · {skill}</Text>

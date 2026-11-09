@@ -20,7 +20,8 @@ const TIME_CONTROLS: TimeControl[] = [
 
 type Lichess = ReturnType<typeof useLichess>;
 
-export function LichessPanel({ lichess }: { lichess: Lichess }) {
+/** onInputFocus lets the screen scroll up so the keyboard does not cover the box being typed in. */
+export function LichessPanel({ lichess, onInputFocus }: { lichess: Lichess; onInputFocus?: () => void }) {
   const [token, setToken] = useState('');
   const [friend, setFriend] = useState('');
   const [tcIndex, setTcIndex] = useState(0);
@@ -39,6 +40,7 @@ export function LichessPanel({ lichess }: { lichess: Lichess }) {
             style={styles.input}
             value={token}
             onChangeText={setToken}
+            onFocus={onInputFocus}
             placeholder="lip_..."
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
@@ -80,6 +82,7 @@ export function LichessPanel({ lichess }: { lichess: Lichess }) {
               style={[styles.input, styles.grow]}
               value={friend}
               onChangeText={setFriend}
+              onFocus={onInputFocus}
               placeholder="Friend's Lichess username"
               placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
