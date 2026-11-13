@@ -13,29 +13,24 @@ movement_algorithm/
 ├── Cargo.toml                             # Cargo Workspace definition
 ├── crates/
 │   ├── movement_planner/                  # Core Rust Motion Planning Engine
-│   │   ├── Cargo.toml
-│   │   ├── src/
-│   │   │   ├── lib.rs                     # Library exports
-│   │   │   ├── types.rs                   # Point2D, GridCoord, PieceType, Config, Commands
-│   │   │   ├── planner.rs                 # Lattice A* Router, Edge Nudging, Move Sequencer
-│   │   │   ├── reset.rs                   # Automatic Magnet Board Reset & Re-racking
-│   │   │   ├── chess_rules.rs             # Complete Chess Rules Engine (legality, checks, mate)
-│   │   │   └── scenarios.rs               # Preset Demonstration Scenarios
-│   │   └── tests/
-│   │       └── test_planner.rs            # Integration & Unit Tests
-│   ├── simulator/                         # Native 3D Hardware-Accelerated Simulator
-│   │   ├── Cargo.toml
+│   │   ├── Cargo.toml                     # (Zero external dependencies)
 │   │   └── src/
-│   │       └── main.rs                    # 3D Gantry Visualizer, Orbit Camera & Interactive GUI
-│   └── test_overlap/                      # Collision & Invariant Verification Suite
+│   │       ├── lib.rs                     # Library exports
+│   │       ├── types.rs                   # Point2D, GridCoord, PieceType, Config, Commands
+│   │       ├── planner.rs                 # Lattice A* Router, Edge Nudging, Move Sequencer
+│   │       ├── reset.rs                   # Automatic Magnet Board Reset & Re-racking
+│   │       ├── chess_rules.rs             # Complete Chess Rules Engine (legality, checks, mate)
+│   │       └── scenarios.rs               # Preset Demonstration Scenarios
+│   └── simulator/                         # Native 3D Hardware-Accelerated Simulator
 │       ├── Cargo.toml
 │       └── src/
-│           └── main.rs                    # Continuous collision checking across all 18 scenarios
+│           ├── main.rs                    # Window and render loop
+│           ├── scene.rs                   # 3D board, pieces, and orbit camera
+│           ├── simulation.rs              # Chess moves and gantry playback
+│           └── ui.rs                      # Controls, telemetry, and command queue
 ├── firmware/                              # Microcontroller C++17 Reference (ESP-IDF / Arduino)
 │   ├── movement_planner.hpp
 │   └── movement_planner.cpp
-├── tests/
-│   └── test_piece_overlap.cpp             # Native C++ verification test suite
 └── README.md
 ```
 
@@ -45,50 +40,16 @@ movement_algorithm/
 
 Make sure Rust is installed (`rustc` and `cargo` in your PATH). All commands are run from `movement_algorithm` (or with `--manifest-path`):
 
-### 1. Launch the Native 3D Gantry Simulator
+### Launch the Native 3D Gantry Simulator
 ```powershell
 cd movement_algorithm
 cargo run -p simulator
 ```
-- **Interactive 3D Viewport**: Real-time rendering of the chessboard, under-board XY gantry carriage, 12V electromagnet with dynamic glow, and 3D procedural chess pieces.
-- **Mouse Camera Controls**:
-  - Left / Right drag: Orbit camera (yaw / pitch).
-  - Mouse scroll wheel: Zoom in / out.
-  - Camera Preset buttons: White POV, Black POV, Top-Down, Under-Board Gantry, Side Profile.
-- **Click to Move**: Click any piece of the side to move to inspect legal moves, then click a highlighted destination square.
-- **Algebraic Move Input**: Type moves directly into the on-screen input box (e.g. `e2e4`, `g1f3`, `e1g1`) and click **Play** or press **Enter**.
-- **Scenario Demos**: One-click preset scenario buttons:
-  1. *Knight Pass (Edge Nudge)*
-  2. *Bishop Tight Diagonal*
-  3. *Capture to Graveyard*
-  4. *Kingside Castling*
-  5. *Pawn Promotion*
-  6. *Magnet Board Reset*
-  7. *Instant Reset*
-- **Playback Controls**: Pause, Resume, Skip Step, Instant Finish, and adjustable animation speed slider ($0.25\times$ to $5.0\times$).
-- **Telemetry HUD**: Live $(X, Y)$ gantry position in square units and millimeters, 12V electromagnet engagement state, and a scrollable real-time command queue.
-
----
-
-### 2. Run the Physical Collision & Overlap Test Suite
-```powershell
-cd movement_algorithm
-cargo run -p test_overlap
-```
-The test suite performs continuous mathematical collision verification across all moves:
-- **Continuous distance checking**: Verifies $\text{dist}(t) \ge R_1 + R_2$ at all times during carriage and piece movements ($t \in [0, 1]$).
-- **Strict 45° angle invariant**: Verifies that every gantry movement is strictly orthogonal ($0^\circ, 90^\circ$) or exact $45^\circ$ diagonal.
-- **Restoration check**: Guarantees that every nudged piece returns to the exact square center.
-- **Boundary check**: Ensures the gantry never exceeds the physical bed limits ($X \in [-2.5, 9.5], Y \in [-1.5, 9.5]$).
-- **All Move Scenarios**: Pawns, Knights, tight Bishop diagonals, Rooks, Queens, Kings, Castling, Captures & Graveyards, En-Passant, Promotions, and Full Board Magnet Resets.
-
----
-
-### 3. Run Standard Unit Tests
-```powershell
-cd movement_algorithm
-cargo test
-```
+- **Board view** supports left or right drag to orbit and scrolling to zoom. Choose **White**, **Black**, **Top**, **Gantry**, or **Side** to reset the camera to a preset. Toggle **Route** to see travel and carry paths, or **Clearance** to see the safety margin around each piece.
+- **Make a move** by clicking a piece and a highlighted destination, or type coordinate notation such as `e2e4` and press **Enter** or click **Play**. For promotion, append `q`, `r`, `b`, or `n` to request an available reserve piece. Queen is the default.
+- **Demos & reset** includes Knight nudge, Tight diagonal, Capture, Castling, and Promotion. **Magnet reset** plans a return to the starting position, while **Instant reset** restores it immediately.
+- **Playback** offers **Pause** and **Resume** (also **Space**), **Skip step** to apply one command immediately, and **Finish** to apply the entire queue. The speed slider runs from $0.25\times$ to $5.0\times$.
+- **Telemetry** shows live X/Y coordinates and electromagnet engagement. Scroll over the command queue to inspect any step, then click the queue to resume following playback.
 
 ---
 
@@ -167,10 +128,4 @@ std::vector<GantryCommand> cmds = planner.planMove(pieces, mv);
 for (const auto& c : cmds) {
     // Dispatch to stepper motor / electromagnet motion layer
 }
-```
-
-Compile native C++ tests:
-```powershell
-g++ -std=c++17 -Wall -Wextra -I. movement_algorithm/tests/test_piece_overlap.cpp movement_algorithm/firmware/movement_planner.cpp -o test_piece_overlap.exe
-.\test_piece_overlap.exe
 ```
