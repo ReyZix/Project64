@@ -1,0 +1,313 @@
+{
+	"globsDependent" : 
+	[
+		{
+			"expression" : "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/*.nnue",
+			"listDirectories" : true,
+			"paths" : 
+			[
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nn-1c0000000000.nnue",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nn-37f18f62d772.nnue"
+			]
+		},
+		{
+			"expression" : "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/*.cpp",
+			"paths" : 
+			[
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/benchmark.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/bitboard.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/engine.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/evaluate.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/main.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/memory.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/misc.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/movegen.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/movepick.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/features/half_ka_v2_hm.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/network.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/nnue_accumulator.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/nnue_misc.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/position.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/score.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/search.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/syzygy/tbprobe.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/thread.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/timeman.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/tt.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/tune.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/uci.cpp",
+				"/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/ucioption.cpp"
+			],
+			"recurse" : true
+		}
+	],
+	"inputs" : 
+	[
+		{
+			"path" : "CMakeLists.txt"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/4.4.3/CMakeSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Darwin-Initialize.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/4.4.3/CMakeCCompiler.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/4.4.3/CMakeCXXCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeGenericSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeInitializeConfigs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Darwin.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/UnixPaths.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Compiler/AppleClang-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Compiler/Clang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Compiler/GNU.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Apple-Clang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CMakeCLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Linker/AppleClang-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Linker/AppleClang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeCXXInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Compiler/AppleClang-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Compiler/Clang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Apple-AppleClang-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Apple-Clang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Linker/AppleClang-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Linker/AppleClang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/FindThreads.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CheckCommon.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CheckCommon.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/Internal/CheckCommon.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "/opt/homebrew/share/cmake/Modules/FindPackageMessage.cmake"
+		}
+	],
+	"kind" : "cmakeFiles",
+	"paths" : 
+	{
+		"build" : "/Users/thoth/Classes/cen4907c/Project64/build",
+		"source" : "/Users/thoth/Classes/cen4907c/Project64/app/native"
+	},
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 1
+	}
+}

@@ -1,0 +1,7 @@
+/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/Project64Chess.dir
+/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/Project64Stockfish.dir
+/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/ChessGameTests.dir
+/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/StockfishTests.dir
+/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/test.dir
+/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/edit_cache.dir
+/Users/thoth/Classes/cen4907c/Project64/build/CMakeFiles/rebuild_cache.dir

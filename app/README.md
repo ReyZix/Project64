@@ -1,5 +1,11 @@
 # Project 64 — Companion App
 
+The C++ / Objective-C++ iOS migration has started in [`native/`](native/README.md).
+That independent target includes the native project foundation, chess rules, and
+local Stockfish (phases 1–2). Follow its README to build with Xcode. The remainder
+of this document describes the existing Expo app, retained until the UI and
+communication services are ported.
+
 React Native (Expo SDK 58, TypeScript) app that runs the game for the Project 64 robotic chessboard. It enforces the rules with `chess.js`, runs Stockfish locally on the phone, and sends moves to the ESP32 over BLE, Wi-Fi, or a simulated board.
 
 ## Setup

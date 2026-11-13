@@ -1,0 +1,2 @@
+/usr/bin/ar qc libProject64Chess.a CMakeFiles/Project64Chess.dir/Core/ChessGame.cpp.o
+/usr/bin/ranlib libProject64Chess.a

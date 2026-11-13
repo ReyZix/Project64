@@ -1,0 +1,158 @@
+[
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++  -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Chess.dir/Core/ChessGame.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Core/ChessGame.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Core/ChessGame.cpp",
+  "output": "CMakeFiles/Project64Chess.dir/Core/ChessGame.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Core/StockfishEngine.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Core/StockfishEngine.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Core/StockfishEngine.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Core/StockfishEngine.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/benchmark.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/benchmark.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/benchmark.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/benchmark.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/bitboard.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/bitboard.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/bitboard.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/bitboard.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/engine.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/engine.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/engine.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/engine.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/evaluate.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/evaluate.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/evaluate.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/evaluate.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/memory.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/memory.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/memory.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/memory.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/misc.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/misc.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/misc.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/misc.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/movegen.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/movegen.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/movegen.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/movegen.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/movepick.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/movepick.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/movepick.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/movepick.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/features/half_ka_v2_hm.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/features/half_ka_v2_hm.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/features/half_ka_v2_hm.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/features/half_ka_v2_hm.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/network.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/network.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/network.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/network.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/nnue_accumulator.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/nnue_accumulator.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/nnue_accumulator.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/nnue_accumulator.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/nnue_misc.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/nnue_misc.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/nnue/nnue_misc.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/nnue/nnue_misc.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/position.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/position.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/position.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/position.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/score.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/score.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/score.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/score.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/search.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/search.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/search.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/search.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/syzygy/tbprobe.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/syzygy/tbprobe.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/syzygy/tbprobe.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/syzygy/tbprobe.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/thread.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/thread.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/thread.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/thread.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/timeman.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/timeman.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/timeman.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/timeman.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/tt.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/tt.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/tt.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/tt.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/tune.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/tune.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/tune.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/tune.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/uci.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/uci.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/uci.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/uci.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++ -DNNUE_EMBEDDING_OFF -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -I/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish -g -std=c++17 -arch arm64 -o CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/ucioption.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/ucioption.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Vendor/stockfish/ucioption.cpp",
+  "output": "CMakeFiles/Project64Stockfish.dir/Vendor/stockfish/ucioption.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++  -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -g -std=c++17 -arch arm64 -UNDEBUG -o CMakeFiles/ChessGameTests.dir/Tests/ChessGameTests.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Tests/ChessGameTests.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Tests/ChessGameTests.cpp",
+  "output": "CMakeFiles/ChessGameTests.dir/Tests/ChessGameTests.cpp.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++  -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -g -std=c++17 -arch arm64 -UNDEBUG -o CMakeFiles/StockfishTests.dir/Tests/StockfishTests.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Tests/StockfishTests.cpp",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Tests/StockfishTests.cpp",
+  "output": "CMakeFiles/StockfishTests.dir/Tests/StockfishTests.cpp.o"
+}
+]
