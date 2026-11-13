@@ -1,8 +1,0 @@
-[package]
-name = "test_overlap"
-version = "0.1.0"
-edition = "2021"
-authors = ["Project 64 Team"]
-
-[dependencies]
-movement_planner = { path = "../movement_planner" }
