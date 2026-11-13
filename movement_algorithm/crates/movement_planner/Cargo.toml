@@ -1,0 +1,8 @@
+[package]
+name = "movement_planner"
+version = "0.1.0"
+edition = "2021"
+description = "Project 64 Autonomous Chessboard Movement & Pathfinding Engine"
+authors = ["Project 64 Team"]
+
+[dependencies]
