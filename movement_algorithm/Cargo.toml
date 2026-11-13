@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "crates/movement_planner",
+    "crates/test_overlap",
+    "crates/simulator",
+]
+resolver = "2"
