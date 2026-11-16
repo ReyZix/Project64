@@ -132,6 +132,25 @@ CMAKE_NM:FILEPATH=/usr/bin/nm
 //Path to a program.
 CMAKE_OBJCOPY:FILEPATH=CMAKE_OBJCOPY-NOTFOUND
 
+//OBJCXX compiler
+CMAKE_OBJCXX_COMPILER:FILEPATH=/usr/bin/clang++
+
+//Flags used by the Objective-C++ compiler during all build types.
+CMAKE_OBJCXX_FLAGS:STRING=
+
+//Flags used by the Objective-C++ compiler during DEBUG builds.
+CMAKE_OBJCXX_FLAGS_DEBUG:STRING=-g
+
+//Flags used by the Objective-C++ compiler during MINSIZEREL builds.
+CMAKE_OBJCXX_FLAGS_MINSIZEREL:STRING=-Os -DNDEBUG
+
+//Flags used by the Objective-C++ compiler during RELEASE builds.
+CMAKE_OBJCXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
+
+//Flags used by the Objective-C++ compiler during RELWITHDEBINFO
+// builds.
+CMAKE_OBJCXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
+
 //Path to a program.
 CMAKE_OBJDUMP:FILEPATH=/usr/bin/objdump
 
@@ -359,6 +378,18 @@ CMAKE_NM-ADVANCED:INTERNAL=1
 CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_OBJCXX_COMPILER
+CMAKE_OBJCXX_COMPILER-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_OBJCXX_FLAGS
+CMAKE_OBJCXX_FLAGS-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_OBJCXX_FLAGS_DEBUG
+CMAKE_OBJCXX_FLAGS_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_OBJCXX_FLAGS_MINSIZEREL
+CMAKE_OBJCXX_FLAGS_MINSIZEREL-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_OBJCXX_FLAGS_RELEASE
+CMAKE_OBJCXX_FLAGS_RELEASE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_OBJCXX_FLAGS_RELWITHDEBINFO
+CMAKE_OBJCXX_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
 CMAKE_OBJDUMP-ADVANCED:INTERNAL=1
 //Platform information initialized
@@ -403,6 +434,19 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Deprecated.  Use -W[no-]deprecated instead.
 CMAKE_WARN_DEPRECATED:INTERNAL=ON
+//Details about finding Python3
+FIND_PACKAGE_MESSAGE_DETAILS_Python3:INTERNAL=[/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14][found components: Interpreter ][v3.14.8()]
 //Details about finding Threads
 FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
+//Compiler reason failure
+_Python3_Compiler_REASON_FAILURE:INTERNAL=
+//Development reason failure
+_Python3_Development_REASON_FAILURE:INTERNAL=
+//Path to a program.
+_Python3_EXECUTABLE:INTERNAL=/opt/homebrew/Frameworks/Python.framework/Versions/3.14/bin/python3.14
+//Python3 Properties
+_Python3_INTERPRETER_PROPERTIES:INTERNAL=Python;3;14;8;ARM64;ARM;64;32;<none>;cpython-314-darwin;abi3;/opt/homebrew/opt/python@3.14/Frameworks/Python.framework/Versions/3.14/lib/python3.14;/opt/homebrew/opt/python@3.14/Frameworks/Python.framework/Versions/3.14/lib/python3.14;/opt/homebrew/lib/python3.14/site-packages;/opt/homebrew/lib/python3.14/site-packages
+_Python3_INTERPRETER_SIGNATURE:INTERNAL=ff51e67373f329cbcbee6a4ac96f4784
+//NumPy reason failure
+_Python3_NumPy_REASON_FAILURE:INTERNAL=
 

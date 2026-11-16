@@ -1,0 +1,168 @@
+{
+	"configurations" : 
+	[
+		{
+			"abstractTargets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "Python3::Interpreter::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Python3__Interpreter-Debug-7ad97ac9c8bf77c02cd3.json",
+					"name" : "Python3::Interpreter",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Python3::InterpreterMultiConfig::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Python3__InterpreterMultiConfig-Debug-15a6ba9e9d5860b937d0.json",
+					"name" : "Python3::InterpreterMultiConfig",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Threads::Threads::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Threads__Threads-Debug-2e1d8ee4857bfd1bdbf2.json",
+					"name" : "Threads::Threads",
+					"projectIndex" : 0
+				}
+			],
+			"directories" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"build" : ".",
+					"jsonFile" : "directory-.-Debug-b23a0b23c080df4d29ba.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"abstractTargetIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Project64Native",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ChessGameTests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ChessGameTests-Debug-423a69b05ad000350050.json",
+					"name" : "ChessGameTests",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "HardwareFlowTests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-HardwareFlowTests-Debug-eda73dfce9c5e0bb7f79.json",
+					"name" : "HardwareFlowTests",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "NativeFlowTests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-NativeFlowTests-Debug-2d91c6e4dbc97bea13a3.json",
+					"name" : "NativeFlowTests",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "OnlineFlowTests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-OnlineFlowTests-Debug-119b997ee18442adb9db.json",
+					"name" : "OnlineFlowTests",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Project64Chess::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Project64Chess-Debug-5778712e3589440d8050.json",
+					"name" : "Project64Chess",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Project64Services::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Project64Services-Debug-fa58085fdf9012a9980e.json",
+					"name" : "Project64Services",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Project64Session::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Project64Session-Debug-51dd47f0460541c6f7d2.json",
+					"name" : "Project64Session",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "Project64Stockfish::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Project64Stockfish-Debug-723e06d684d7fdc2ec91.json",
+					"name" : "Project64Stockfish",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "StockfishTests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-StockfishTests-Debug-b06808036a8b476a4b43.json",
+					"name" : "StockfishTests",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/thoth/Classes/cen4907c/Project64/build",
+		"source" : "/Users/thoth/Classes/cen4907c/Project64/app/native"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 11
+	}
+}

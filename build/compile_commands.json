@@ -145,6 +145,48 @@
 },
 {
   "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++   -x objective-c++ -g -std=c++17 -arch arm64 -fobjc-arc -o CMakeFiles/Project64Services.dir/Services/Hardware/P64Hardware.mm.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Services/Hardware/P64Hardware.mm",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Services/Hardware/P64Hardware.mm",
+  "output": "CMakeFiles/Project64Services.dir/Services/Hardware/P64Hardware.mm.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++   -x objective-c++ -g -std=c++17 -arch arm64 -fobjc-arc -o CMakeFiles/Project64Services.dir/Services/Online/P64LichessService.mm.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Services/Online/P64LichessService.mm",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Services/Online/P64LichessService.mm",
+  "output": "CMakeFiles/Project64Services.dir/Services/Online/P64LichessService.mm.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++   -x objective-c++ -g -std=c++17 -arch arm64 -fobjc-arc -o CMakeFiles/Project64Services.dir/Services/Online/P64TokenStore.mm.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Services/Online/P64TokenStore.mm",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Services/Online/P64TokenStore.mm",
+  "output": "CMakeFiles/Project64Services.dir/Services/Online/P64TokenStore.mm.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++  -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -x objective-c++ -g -std=c++17 -arch arm64 -fobjc-arc -o CMakeFiles/Project64Session.dir/App/P64GameSession.mm.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/App/P64GameSession.mm",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/App/P64GameSession.mm",
+  "output": "CMakeFiles/Project64Session.dir/App/P64GameSession.mm.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++   -x objective-c++ -g -std=c++17 -arch arm64 -fobjc-arc -UNDEBUG -o CMakeFiles/HardwareFlowTests.dir/Services/Hardware/Tests/P64HardwareTests.mm.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Services/Hardware/Tests/P64HardwareTests.mm",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Services/Hardware/Tests/P64HardwareTests.mm",
+  "output": "CMakeFiles/HardwareFlowTests.dir/Services/Hardware/Tests/P64HardwareTests.mm.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++   -x objective-c++ -g -std=c++17 -arch arm64 -fobjc-arc -UNDEBUG -o CMakeFiles/OnlineFlowTests.dir/Services/Online/Tests/P64LichessServiceTests.mm.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Services/Online/Tests/P64LichessServiceTests.mm",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Services/Online/Tests/P64LichessServiceTests.mm",
+  "output": "CMakeFiles/OnlineFlowTests.dir/Services/Online/Tests/P64LichessServiceTests.mm.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
+  "command": "/usr/bin/clang++  -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -x objective-c++ -g -std=c++17 -arch arm64 -fobjc-arc -UNDEBUG -o CMakeFiles/NativeFlowTests.dir/Tests/NativeFlowTests.mm.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Tests/NativeFlowTests.mm",
+  "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Tests/NativeFlowTests.mm",
+  "output": "CMakeFiles/NativeFlowTests.dir/Tests/NativeFlowTests.mm.o"
+},
+{
+  "directory": "/Users/thoth/Classes/cen4907c/Project64/build",
   "command": "/usr/bin/clang++  -I/Users/thoth/Classes/cen4907c/Project64/app/native/Core -g -std=c++17 -arch arm64 -UNDEBUG -o CMakeFiles/ChessGameTests.dir/Tests/ChessGameTests.cpp.o -c /Users/thoth/Classes/cen4907c/Project64/app/native/Tests/ChessGameTests.cpp",
   "file": "/Users/thoth/Classes/cen4907c/Project64/app/native/Tests/ChessGameTests.cpp",
   "output": "CMakeFiles/ChessGameTests.dir/Tests/ChessGameTests.cpp.o"

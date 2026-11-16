@@ -1,0 +1,2 @@
+/usr/bin/ar qc libProject64Session.a CMakeFiles/Project64Session.dir/App/P64GameSession.mm.o
+/usr/bin/ranlib libProject64Session.a

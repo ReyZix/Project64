@@ -41,13 +41,13 @@ StockfishEngine::~StockfishEngine() {
 }
 
 StockfishResult StockfishEngine::search(const std::string& fen, const std::vector<std::string>& moves,
-                                        int depth, int movetimeMs, int skill) {
+                                        int depth, int movetimeMs, int skill, const std::atomic_bool *cancellation) {
     unsigned long long generation;
     { std::lock_guard<std::mutex> lock(impl_->state); generation = impl_->generation; }
     std::lock_guard<std::mutex> serial(impl_->serial);
     std::lock_guard<std::mutex> global(engineMutex);
     { std::lock_guard<std::mutex> lock(impl_->state);
-      if (generation != impl_->generation) return {{}, true, {}}; }
+      if (generation != impl_->generation || (cancellation && cancellation->load())) return {{}, true, {}}; }
     if (depth < 0 || movetimeMs < 0 || (depth == 0 && movetimeMs == 0) || skill < 0 || skill > 20)
         return {{}, false, "Invalid search limits or skill level"};
     try {
@@ -76,7 +76,7 @@ StockfishResult StockfishEngine::search(const std::string& fen, const std::vecto
         limits.movetime = movetimeMs;
         {
             std::lock_guard<std::mutex> lock(impl_->state);
-            if (generation != impl_->generation) return {{}, true, {}};
+            if (generation != impl_->generation || (cancellation && cancellation->load())) return {{}, true, {}};
             impl_->running = true;
             engine.go(limits);
         }
@@ -84,7 +84,7 @@ StockfishResult StockfishEngine::search(const std::string& fen, const std::vecto
         {
             std::lock_guard<std::mutex> lock(impl_->state);
             impl_->running = false;
-            if (generation != impl_->generation) return {{}, true, {}};
+            if (generation != impl_->generation || (cancellation && cancellation->load())) return {{}, true, {}};
         }
         if (best.empty() || best == "(none)" || best == "0000") return {{}, false, "No legal move"};
         if (!position.apply(best)) return {{}, false, "Engine returned an illegal move"};

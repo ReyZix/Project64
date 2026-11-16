@@ -154,6 +154,71 @@ Project64Stockfish/fast:
 .PHONY : Project64Stockfish/fast
 
 #=============================================================================
+# Target rules for targets named Project64Services
+
+# Build rule for target.
+Project64Services: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Project64Services
+.PHONY : Project64Services
+
+# fast build rule for target.
+Project64Services/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Project64Services.dir/build.make CMakeFiles/Project64Services.dir/build
+.PHONY : Project64Services/fast
+
+#=============================================================================
+# Target rules for targets named Project64Session
+
+# Build rule for target.
+Project64Session: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Project64Session
+.PHONY : Project64Session
+
+# fast build rule for target.
+Project64Session/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Project64Session.dir/build.make CMakeFiles/Project64Session.dir/build
+.PHONY : Project64Session/fast
+
+#=============================================================================
+# Target rules for targets named HardwareFlowTests
+
+# Build rule for target.
+HardwareFlowTests: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 HardwareFlowTests
+.PHONY : HardwareFlowTests
+
+# fast build rule for target.
+HardwareFlowTests/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/HardwareFlowTests.dir/build.make CMakeFiles/HardwareFlowTests.dir/build
+.PHONY : HardwareFlowTests/fast
+
+#=============================================================================
+# Target rules for targets named OnlineFlowTests
+
+# Build rule for target.
+OnlineFlowTests: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 OnlineFlowTests
+.PHONY : OnlineFlowTests
+
+# fast build rule for target.
+OnlineFlowTests/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OnlineFlowTests.dir/build.make CMakeFiles/OnlineFlowTests.dir/build
+.PHONY : OnlineFlowTests/fast
+
+#=============================================================================
+# Target rules for targets named NativeFlowTests
+
+# Build rule for target.
+NativeFlowTests: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 NativeFlowTests
+.PHONY : NativeFlowTests
+
+# fast build rule for target.
+NativeFlowTests/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NativeFlowTests.dir/build.make CMakeFiles/NativeFlowTests.dir/build
+.PHONY : NativeFlowTests/fast
+
+#=============================================================================
 # Target rules for targets named ChessGameTests
 
 # Build rule for target.
@@ -178,6 +243,14 @@ StockfishTests: cmake_check_build_system
 StockfishTests/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/StockfishTests.dir/build.make CMakeFiles/StockfishTests.dir/build
 .PHONY : StockfishTests/fast
+
+App/P64GameSession.o: App/P64GameSession.mm.o
+.PHONY : App/P64GameSession.o
+
+# target to build an object file
+App/P64GameSession.mm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Project64Session.dir/build.make CMakeFiles/Project64Session.dir/App/P64GameSession.mm.o
+.PHONY : App/P64GameSession.mm.o
 
 Core/ChessGame.o: Core/ChessGame.cpp.o
 .PHONY : Core/ChessGame.o
@@ -227,6 +300,46 @@ Core/StockfishEngine.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Project64Stockfish.dir/build.make CMakeFiles/Project64Stockfish.dir/Core/StockfishEngine.cpp.s
 .PHONY : Core/StockfishEngine.cpp.s
 
+Services/Hardware/P64Hardware.o: Services/Hardware/P64Hardware.mm.o
+.PHONY : Services/Hardware/P64Hardware.o
+
+# target to build an object file
+Services/Hardware/P64Hardware.mm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Project64Services.dir/build.make CMakeFiles/Project64Services.dir/Services/Hardware/P64Hardware.mm.o
+.PHONY : Services/Hardware/P64Hardware.mm.o
+
+Services/Hardware/Tests/P64HardwareTests.o: Services/Hardware/Tests/P64HardwareTests.mm.o
+.PHONY : Services/Hardware/Tests/P64HardwareTests.o
+
+# target to build an object file
+Services/Hardware/Tests/P64HardwareTests.mm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/HardwareFlowTests.dir/build.make CMakeFiles/HardwareFlowTests.dir/Services/Hardware/Tests/P64HardwareTests.mm.o
+.PHONY : Services/Hardware/Tests/P64HardwareTests.mm.o
+
+Services/Online/P64LichessService.o: Services/Online/P64LichessService.mm.o
+.PHONY : Services/Online/P64LichessService.o
+
+# target to build an object file
+Services/Online/P64LichessService.mm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Project64Services.dir/build.make CMakeFiles/Project64Services.dir/Services/Online/P64LichessService.mm.o
+.PHONY : Services/Online/P64LichessService.mm.o
+
+Services/Online/P64TokenStore.o: Services/Online/P64TokenStore.mm.o
+.PHONY : Services/Online/P64TokenStore.o
+
+# target to build an object file
+Services/Online/P64TokenStore.mm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Project64Services.dir/build.make CMakeFiles/Project64Services.dir/Services/Online/P64TokenStore.mm.o
+.PHONY : Services/Online/P64TokenStore.mm.o
+
+Services/Online/Tests/P64LichessServiceTests.o: Services/Online/Tests/P64LichessServiceTests.mm.o
+.PHONY : Services/Online/Tests/P64LichessServiceTests.o
+
+# target to build an object file
+Services/Online/Tests/P64LichessServiceTests.mm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OnlineFlowTests.dir/build.make CMakeFiles/OnlineFlowTests.dir/Services/Online/Tests/P64LichessServiceTests.mm.o
+.PHONY : Services/Online/Tests/P64LichessServiceTests.mm.o
+
 Tests/ChessGameTests.o: Tests/ChessGameTests.cpp.o
 .PHONY : Tests/ChessGameTests.o
 
@@ -250,6 +363,14 @@ Tests/ChessGameTests.s: Tests/ChessGameTests.cpp.s
 Tests/ChessGameTests.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ChessGameTests.dir/build.make CMakeFiles/ChessGameTests.dir/Tests/ChessGameTests.cpp.s
 .PHONY : Tests/ChessGameTests.cpp.s
+
+Tests/NativeFlowTests.o: Tests/NativeFlowTests.mm.o
+.PHONY : Tests/NativeFlowTests.o
+
+# target to build an object file
+Tests/NativeFlowTests.mm.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NativeFlowTests.dir/build.make CMakeFiles/NativeFlowTests.dir/Tests/NativeFlowTests.mm.o
+.PHONY : Tests/NativeFlowTests.mm.o
 
 Tests/StockfishTests.o: Tests/StockfishTests.cpp.o
 .PHONY : Tests/StockfishTests.o
@@ -813,18 +934,30 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... ChessGameTests"
+	@echo "... HardwareFlowTests"
+	@echo "... NativeFlowTests"
+	@echo "... OnlineFlowTests"
 	@echo "... Project64Chess"
+	@echo "... Project64Services"
+	@echo "... Project64Session"
 	@echo "... Project64Stockfish"
 	@echo "... StockfishTests"
+	@echo "... App/P64GameSession.o"
 	@echo "... Core/ChessGame.o"
 	@echo "... Core/ChessGame.i"
 	@echo "... Core/ChessGame.s"
 	@echo "... Core/StockfishEngine.o"
 	@echo "... Core/StockfishEngine.i"
 	@echo "... Core/StockfishEngine.s"
+	@echo "... Services/Hardware/P64Hardware.o"
+	@echo "... Services/Hardware/Tests/P64HardwareTests.o"
+	@echo "... Services/Online/P64LichessService.o"
+	@echo "... Services/Online/P64TokenStore.o"
+	@echo "... Services/Online/Tests/P64LichessServiceTests.o"
 	@echo "... Tests/ChessGameTests.o"
 	@echo "... Tests/ChessGameTests.i"
 	@echo "... Tests/ChessGameTests.s"
+	@echo "... Tests/NativeFlowTests.o"
 	@echo "... Tests/StockfishTests.o"
 	@echo "... Tests/StockfishTests.i"
 	@echo "... Tests/StockfishTests.s"

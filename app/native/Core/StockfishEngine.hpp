@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -26,7 +27,8 @@ public:
 
     StockfishResult search(const std::string& initialFen,
                            const std::vector<std::string>& moves,
-                           int depth, int movetimeMs, int skill);
+                           int depth, int movetimeMs, int skill,
+                           const std::atomic_bool *cancellation = nullptr);
     void cancel();
     void newGame();
 

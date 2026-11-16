@@ -1,0 +1,2 @@
+/usr/bin/ar qc libProject64Services.a CMakeFiles/Project64Services.dir/Services/Hardware/P64Hardware.mm.o CMakeFiles/Project64Services.dir/Services/Online/P64LichessService.mm.o CMakeFiles/Project64Services.dir/Services/Online/P64TokenStore.mm.o
+/usr/bin/ranlib libProject64Services.a

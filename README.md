@@ -3,9 +3,8 @@
 Project 64 Senior Design.
 
 Native iOS migration: [`app/native`](app/native/README.md) contains the standalone
-C++ / Objective-C++ project foundation, chess rules, and native Stockfish engine.
-The existing Expo app remains available while its UI and communication services
-are migrated.
+C++ / Objective-C++ iOS app, chess rules, native Stockfish engine, UIKit screens,
+board transports and Lichess services. The existing Expo app remains as a reference.
 
 The combined movement planner and simulator are in [movement_algorithm](./movement_algorithm/README.md).
 

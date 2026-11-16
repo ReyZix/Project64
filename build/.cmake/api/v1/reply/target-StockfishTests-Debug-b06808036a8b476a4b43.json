@@ -26,13 +26,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 26,
+				"line" : 50,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 27,
+				"line" : 51,
 				"parent" : 0
 			},
 			{
@@ -44,7 +44,7 @@
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 28,
+				"line" : 52,
 				"parent" : 0
 			}
 		]
@@ -100,11 +100,11 @@
 	[
 		{
 			"backtrace" : 2,
-			"id" : "Project64Chess::@6890427a1f51a3e7e1df"
+			"id" : "Project64Stockfish::@6890427a1f51a3e7e1df"
 		},
 		{
 			"backtrace" : 2,
-			"id" : "Project64Stockfish::@6890427a1f51a3e7e1df"
+			"id" : "Project64Chess::@6890427a1f51a3e7e1df"
 		}
 	],
 	"id" : "StockfishTests::@6890427a1f51a3e7e1df",

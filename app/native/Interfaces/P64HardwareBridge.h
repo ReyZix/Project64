@@ -12,7 +12,7 @@ typedef NS_ENUM(uint8_t, P64SystemCommand) {
     P64SystemHome = 1, P64SystemEmergencyStop = 2, P64SystemReboot = 3
 };
 
-// Contract for the next phase; no transport implementation is included yet.
+// Shared contract implemented by the native BLE, Wi-Fi and mock transports.
 // Deliver callbacks on the main queue. Complete writes only when accepted by
 // the transport; this does not mean physical movement has finished.
 @protocol P64HardwareBridge <NSObject>
