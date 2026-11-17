@@ -1,0 +1,66 @@
+/*
+ * PROJECT 64 - Motor Test
+ * ESP32-WROOM-32
+ * BIGTREETECH TMC2209 V1.3
+ * NEMA 17 Stepper Motor
+ */
+#include <Arduino.h>
+
+const int STEP_PIN = 25;
+const int DIR_PIN  = 26;
+const int EN_PIN   = 13;
+
+// Starting and maximum pulse rates
+const int START_DELAY_US = 5000;
+const int FAST_DELAY_US  = 500;
+
+const int RAMP_PULSES = 2000;
+
+// Send one STEP pulse
+void stepMotor(int delayUs) {
+  digitalWrite(STEP_PIN, HIGH);
+  delayMicroseconds(delayUs);
+
+  digitalWrite(STEP_PIN, LOW);
+  delayMicroseconds(delayUs);
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(EN_PIN, OUTPUT);
+  digitalWrite(EN_PIN, HIGH);
+
+  pinMode(STEP_PIN, OUTPUT);
+  pinMode(DIR_PIN, OUTPUT);
+
+  digitalWrite(STEP_PIN, LOW);
+  digitalWrite(DIR_PIN, HIGH);
+
+  delay(1000);
+
+  // Enable TMC2209
+  digitalWrite(EN_PIN, LOW);
+
+  Serial.println("Starting continuous motor rotation");
+
+  // Gradually increase speed
+  for (int i = 0; i < RAMP_PULSES; i++) {
+    int delayUs = map(
+      i,
+      0,
+      RAMP_PULSES - 1,
+      START_DELAY_US,
+      FAST_DELAY_US
+    );
+
+    stepMotor(delayUs);
+  }
+
+  Serial.println("Maximum speed reached");
+}
+
+void loop() {
+  // Keep rotating in the same direction
+  stepMotor(FAST_DELAY_US);
+}
