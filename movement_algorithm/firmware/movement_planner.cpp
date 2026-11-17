@@ -392,6 +392,30 @@ std::vector<GantryCommand> MovementPlanner::planMove(
     }
     if (movingIdx < 0) return cmds;
 
+    // Validate promotion before generating any commands.
+    // A promotion cannot proceed without a matching reserve piece.
+    if (move.isPromotion) {
+        const PieceState& movingPiece = pieces[movingIdx];
+
+        // Only a pawn can be promoted.
+        if (movingPiece.type != PieceType::PAWN) {
+            return cmds;
+        }
+
+        int promoIdx = findPromotionPieceInReserve(
+            pieces,
+            movingPiece.color,
+            move.promotionType,
+            squareCenter(move.to)
+        );
+
+        // Reject the move if no replacement piece is available.
+        if (promoIdx < 0) {
+            return cmds;
+        }
+    }
+
+
     // Step A: Handle Capture (escort captured piece to its 16-slot graveyard spot)
     if (move.isCapture) {
         GridCoord capSq = (move.capturedSquare.col != -99) ? move.capturedSquare : move.to;
